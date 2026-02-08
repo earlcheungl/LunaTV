@@ -138,6 +138,7 @@ function PlayPageClient() {
 
   // 弹幕设置面板状态
   const [isDanmuSettingsPanelOpen, setIsDanmuSettingsPanelOpen] = useState(false);
+  const [, setDanmuSettingsVersion] = useState(0);
 
   // 下载选集面板状态
   const [showDownloadEpisodeSelector, setShowDownloadEpisodeSelector] = useState(false);
@@ -5437,9 +5438,8 @@ function PlayPageClient() {
             }
           }
 
-          // 强制重新渲染面板以显示新值
-          setIsDanmuSettingsPanelOpen(false);
-          setTimeout(() => setIsDanmuSettingsPanelOpen(true), 50);
+          // 触发面板重新读取设置（通过 key 变化）
+          setDanmuSettingsVersion(v => v + 1);
         }}
         danmuCount={danmuList.length} // 使用state而不是ref，确保React能追踪变化
         loading={danmuLoading}
