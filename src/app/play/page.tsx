@@ -400,6 +400,7 @@ function PlayPageClient() {
   ]);
 
   // 🎬 更新全屏标题层内容（集数变化时）
+  // portalContainer 作为依赖确保 ArtPlayer 初始化后再执行
   useEffect(() => {
     if (!artPlayerRef.current) return;
     const titleLayer = artPlayerRef.current.layers['fullscreen-title'];
@@ -420,7 +421,7 @@ function PlayPageClient() {
         </div>
       </div>
     `;
-  }, [currentEpisodeIndex, detail]);
+  }, [currentEpisodeIndex, detail, portalContainer]);
 
   // 获取自定义去广告代码
   useEffect(() => {
