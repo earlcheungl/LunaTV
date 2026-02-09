@@ -4229,9 +4229,22 @@ function PlayPageClient() {
         });
 
         // 🎬 全屏标题/集数层
+        const fsEpisodeName = detail?.episodes_titles?.[currentEpisodeIndex] || '';
+        const fsHasEpisodes = detail?.episodes && detail.episodes.length > 1;
         artPlayerRef.current.layers.add({
           name: 'fullscreen-title',
-          html: '',
+          html: `
+            <div class="fullscreen-title-container">
+              <div class="fullscreen-title-content">
+                <h1 class="fullscreen-title-text">${detail?.title || ''}</h1>
+                ${fsHasEpisodes && fsEpisodeName
+                  ? `<span class="fullscreen-episode-text">${fsEpisodeName}</span>`
+                  : fsHasEpisodes
+                    ? `<span class="fullscreen-episode-text">第 ${currentEpisodeIndex + 1} 集</span>`
+                    : ''}
+              </div>
+            </div>
+          `,
           style: {
             position: 'absolute',
             top: '0',
