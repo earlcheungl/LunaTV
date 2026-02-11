@@ -34,6 +34,7 @@ import OwnerChangeDialog from '@/components/play/OwnerChangeDialog';
 import VideoCoverDisplay from '@/components/play/VideoCoverDisplay';
 import PlayErrorDisplay from '@/components/play/PlayErrorDisplay';
 import DanmuSettingsPanel from '@/components/play/DanmuSettingsPanel';
+import WebSRSettingsPanel from '@/components/play/WebSRSettingsPanel';
 import artplayerPluginChromecast from '@/lib/artplayer-plugin-chromecast';
 import artplayerPluginLiquidGlass from '@/lib/artplayer-plugin-liquid-glass';
 import { ClientCache } from '@/lib/client-cache';
@@ -143,6 +144,9 @@ function PlayPageClient() {
   const [isDanmuSettingsPanelOpen, setIsDanmuSettingsPanelOpen] = useState(false);
   const [, setDanmuSettingsVersion] = useState(0);
   const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(null);
+
+  // WebSR 设置面板状态
+  const [isWebSRSettingsPanelOpen, setIsWebSRSettingsPanelOpen] = useState(false);
 
   // 下载选集面板状态
   const [showDownloadEpisodeSelector, setShowDownloadEpisodeSelector] = useState(false);
@@ -3932,67 +3936,15 @@ function PlayPageClient() {
           },
           ...(webGPUSupported ? [
             {
-              name: 'AI超分辨率',
-              html: 'AI超分辨率',
-              switch: websrEnabledRef.current,
-              onSwitch: async function (item: any) {
-                const newVal = !item.switch;
-                await toggleWebSR(newVal);
-                return newVal;
-              },
-            },
-            {
-              name: '超分模式',
-              html: '超分模式',
-              selector: [
-                { html: '2x超分辨率', value: 'upscale', default: websrModeRef.current === 'upscale' },
-                { html: '画质修复(降噪)', value: 'restore', default: websrModeRef.current === 'restore' },
-              ],
-              onSelect: async function (item: any) {
-                setWebsrMode(item.value);
-                localStorage.setItem('websr_mode', item.value);
-                await switchWebSRConfig();
-                return item.html;
-              },
-            },
-            {
-              name: '内容类型',
-              html: '内容类型',
-              selector: [
-                { html: '动漫(Anime)', value: 'an', default: websrContentTypeRef.current === 'an' },
-                { html: '真人(Real-Life)', value: 'rl', default: websrContentTypeRef.current === 'rl' },
-                { html: '3D', value: '3d', default: websrContentTypeRef.current === '3d' },
-              ],
-              onSelect: async function (item: any) {
-                setWebsrContentType(item.value);
-                localStorage.setItem('websr_content_type', item.value);
-                await switchWebSRConfig();
-                return item.html;
-              },
-            },
-            {
-              name: '画质等级',
-              html: '画质等级',
-              selector: [
-                { html: '快速(Small)', value: 's', default: websrNetworkSizeRef.current === 's' },
-                { html: '标准(Medium)', value: 'm', default: websrNetworkSizeRef.current === 'm' },
-                { html: '高质(Large)', value: 'l', default: websrNetworkSizeRef.current === 'l' },
-              ],
-              onSelect: async function (item: any) {
-                setWebsrNetworkSize(item.value);
-                localStorage.setItem('websr_network_size', item.value);
-                await switchWebSRConfig();
-                return item.html;
-              },
-            },
-            {
-              name: '画面对比',
-              html: '画面对比',
-              switch: websrCompareEnabled,
-              onSwitch: function (item: any) {
-                const newVal = !item.switch;
-                setWebsrCompareEnabled(newVal);
-                return newVal;
+              name: 'WebSR超分设置',
+              html: 'WebSR超分设置',
+              icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>',
+              click: function () {
+                setIsWebSRSettingsPanelOpen(true);
+                if (artPlayerRef.current) {
+                  artPlayerRef.current.setting.show = false;
+                }
+                return '打开WebSR设置面板';
               },
             },
           ] : []),
@@ -5615,6 +5567,68 @@ function PlayPageClient() {
                 }
                 return result.count;
               }}
+            />
+          </div>
+        </div>,
+        portalContainer
+      )}
+
+      {/* WebSR 设置面板 */}
+      {isWebSRSettingsPanelOpen && portalContainer && createPortal(
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9998,
+            pointerEvents: 'none',
+          }}
+        >
+          <div style={{ pointerEvents: 'auto' }}>
+            <WebSRSettingsPanel
+              isOpen={isWebSRSettingsPanelOpen}
+              onClose={() => setIsWebSRSettingsPanelOpen(false)}
+              settings={{
+                enabled: websrEnabled,
+                mode: websrMode,
+                contentType: websrContentType,
+                networkSize: websrNetworkSize,
+                compareEnabled: websrCompareEnabled,
+                comparePosition: 50,
+              }}
+              onSettingsChange={async (newSettings) => {
+                // 更新启用状态
+                if (newSettings.enabled !== undefined) {
+                  await toggleWebSR(newSettings.enabled);
+                }
+
+                // 更新模式
+                if (newSettings.mode !== undefined) {
+                  setWebsrMode(newSettings.mode);
+                  localStorage.setItem('websr_mode', newSettings.mode);
+                  await switchWebSRConfig();
+                }
+
+                // 更新内容类型
+                if (newSettings.contentType !== undefined) {
+                  setWebsrContentType(newSettings.contentType);
+                  localStorage.setItem('websr_content_type', newSettings.contentType);
+                  await switchWebSRConfig();
+                }
+
+                // 更新画质等级
+                if (newSettings.networkSize !== undefined) {
+                  setWebsrNetworkSize(newSettings.networkSize);
+                  localStorage.setItem('websr_network_size', newSettings.networkSize);
+                  await switchWebSRConfig();
+                }
+
+                // 更新对比模式
+                if (newSettings.compareEnabled !== undefined) {
+                  setWebsrCompareEnabled(newSettings.compareEnabled);
+                }
+              }}
+              webGPUSupported={webGPUSupported}
+              processing={false}
             />
           </div>
         </div>,
