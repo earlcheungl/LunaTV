@@ -3922,7 +3922,7 @@ function PlayPageClient() {
             name: '弹幕设置',
             html: '弹幕设置',
             tooltip: '打开弹幕设置面板',
-            icon: '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>',
+            icon: '<text x="50%" y="50%" font-size="14" font-weight="bold" text-anchor="middle" dominant-baseline="middle" fill="#ffffff">弹</text>',
             // 🎨 点击式按钮，打开美化的弹幕设置面板
             onClick: function () {
               setIsDanmuSettingsPanelOpen(true);
@@ -3936,15 +3936,16 @@ function PlayPageClient() {
           },
           ...(webGPUSupported ? [
             {
-              name: 'WebSR超分设置',
-              html: 'WebSR超分设置',
-              icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>',
-              click: function () {
+              name: '超分设置',
+              html: '超分设置',
+              icon: '<text x="50%" y="50%" font-size="14" font-weight="bold" text-anchor="middle" dominant-baseline="middle" fill="#ffffff">超</text>',
+              tooltip: '打开AI超分设置面板',
+              onClick: function () {
                 setIsWebSRSettingsPanelOpen(true);
                 if (artPlayerRef.current) {
                   artPlayerRef.current.setting.show = false;
                 }
-                return '打开WebSR设置面板';
+                return '打开AI超分设置面板';
               },
             },
           ] : []),
