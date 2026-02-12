@@ -63,6 +63,10 @@ import {
   useDoubanDetailsQuery,
   useDoubanCommentsQuery,
 } from './hooks/usePlayPageQueries';
+import {
+  usePrefetchNextEpisode,
+  usePrefetchDoubanData,
+} from './hooks/usePlayPagePrefetch';
 
 // 扩展 HTMLVideoElement 类型以支持 hls 属性
 declare global {
@@ -781,6 +785,22 @@ function PlayPageClient() {
     videoDoubanId: videoDoubanId,  // 传入豆瓣ID
     searchTitle: searchTitle,  // 传入搜索标题
     setCurrentEpisodeIndex,  // 传入切换集数的函数
+  });
+
+  // 🚀 数据预取 - 下一集预取（当播放进度达到80%时）
+  usePrefetchNextEpisode({
+    detail,
+    currentEpisodeIndex,
+    currentTime: currentPlayTime,
+    duration: videoDuration,
+    source: currentSource,
+    id: currentId,
+  });
+
+  // 🚀 数据预取 - 豆瓣数据预取（当视频加载时）
+  usePrefetchDoubanData({
+    videoDoubanId: videoDoubanId ? String(videoDoubanId) : null,
+    enabled: !!videoDoubanId,
   });
 
   // -----------------------------------------------------------------------------
