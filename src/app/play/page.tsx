@@ -2405,7 +2405,8 @@ function PlayPageClient() {
   useEffect(() => {
     const fetchSourceDetail = async (
       source: string,
-      id: string
+      id: string,
+      title?: string
     ): Promise<SearchResult[]> => {
       try {
         let detailResponse;
@@ -2421,8 +2422,10 @@ function PlayPageClient() {
           );
         } else {
           // 所有其他源（包括 Emby）统一使用 /api/detail
+          // 添加 title 参数用于搜索匹配
+          const titleParam = title ? `&title=${encodeURIComponent(title)}` : '';
           detailResponse = await fetch(
-            `/api/detail?source=${source}&id=${id}`
+            `/api/detail?source=${source}&id=${id}${titleParam}`
           );
         }
 
@@ -2670,7 +2673,8 @@ function PlayPageClient() {
           console.log('[Play] 获取当前源详情:', currentSource, currentId);
           const currentSourceDetail = await fetchSourceDetail(
             currentSource,
-            currentId
+            currentId,
+            searchTitle || videoTitle
           );
           console.log('[Play] 获取到的详情:', currentSourceDetail);
           if (currentSourceDetail.length > 0) {
@@ -2726,7 +2730,7 @@ function PlayPageClient() {
           // 如果是 emby 源且 episodes 为空，需要调用 detail 接口获取完整信息
           if ((detailData.source === 'emby' || detailData.source.startsWith('emby_')) && (!detailData.episodes || detailData.episodes.length === 0)) {
             console.log('[Play] Emby source has no episodes, fetching detail...');
-            const detailSources = await fetchSourceDetail(currentSource, currentId);
+            const detailSources = await fetchSourceDetail(currentSource, currentId, searchTitle || videoTitle);
             if (detailSources.length > 0) {
               detailData = detailSources[0];
             }
@@ -2778,7 +2782,7 @@ function PlayPageClient() {
       // 如果是 emby 源且 episodes 为空，需要调用 detail 接口获取完整信息
       if ((detailData.source === 'emby' || detailData.source.startsWith('emby_')) && (!detailData.episodes || detailData.episodes.length === 0)) {
         console.log('[Play] Emby source has no episodes, fetching detail...');
-        const detailSources = await fetchSourceDetail(detailData.source, detailData.id);
+        const detailSources = await fetchSourceDetail(detailData.source, detailData.id, detailData.title || videoTitleRef.current);
         if (detailSources.length > 0) {
           detailData = detailSources[0];
         }
