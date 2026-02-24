@@ -2722,6 +2722,28 @@ function PlayPageClient() {
       if (!detailData) {
         detailData = sourcesInfo[0];
       }
+      // 指定源和id且无需优选
+      if (currentSource && currentId && !needPreferRef.current) {
+        const target = sourcesInfo.find(
+          (source) => source.source === currentSource && source.id === currentId
+        );
+        if (target) {
+          detailData = target;
+
+          // 如果是 emby 源且 episodes 为空，需要调用 detail 接口获取完整信息
+          if ((detailData.source === 'emby' || detailData.source.startsWith('emby_')) && (!detailData.episodes || detailData.episodes.length === 0)) {
+            console.log('[Play] Emby source has no episodes, fetching detail...');
+            const detailSources = await fetchSourceDetail(currentSource, currentId);
+            if (detailSources.length > 0) {
+              detailData = detailSources[0];
+            }
+          }
+        } else {
+          setError('未找到匹配结果');
+          setLoading(false);
+          return;
+        }
+      }
 
       // 未指定源和 id 或需要优选，且开启优选开关
       if (
