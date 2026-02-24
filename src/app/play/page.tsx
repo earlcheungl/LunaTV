@@ -2436,9 +2436,11 @@ function PlayPageClient() {
         }
         const detailData = (await detailResponse.json()) as SearchResult;
 
-        // 检查是否有有效的集数数据
-        if (!detailData.episodes || detailData.episodes.length === 0) {
-          throw new Error('该源没有可用的集数数据');
+        // 检查是否有有效的集数数据（Emby源除外，因为API已经处理好了）
+        if (source !== 'emby' && !source.startsWith('emby_')) {
+          if (!detailData.episodes || detailData.episodes.length === 0) {
+            throw new Error('该源没有可用的集数数据');
+          }
         }
 
         // 对于短剧源，还需要检查 title 和 poster 是否有效
@@ -2669,97 +2671,52 @@ function PlayPageClient() {
           : '🔍 正在搜索播放源...'
       );
 
+      let detailData: SearchResult | null = null;
       let sourcesInfo: SearchResult[] = [];
 
-      // 对于短剧，直接获取详情，跳过搜索
-      if (currentSource === 'shortdrama' && currentId) {
-        sourcesInfo = await fetchSourceDetail(currentSource, currentId);
-        // 只有当短剧源有有效数据时才设置可用源列表
-        if (sourcesInfo.length > 0 && sourcesInfo[0].episodes && sourcesInfo[0].episodes.length > 0) {
-          await setAvailableSourcesWithWeight(sourcesInfo);
-        } else {
-          console.log('⚠️ 短剧源没有有效数据，不设置可用源列表');
-          setAvailableSources([]);
-        }
-      } else {
-        // 其他情况先搜索所有视频源
-        sourcesInfo = await fetchSourcesData(searchTitle || videoTitle);
-
-        if (
-          currentSource &&
-          currentId &&
-          !sourcesInfo.some(
-            (source) => source.source === currentSource && source.id === currentId
-          )
-        ) {
-          sourcesInfo = await fetchSourceDetail(currentSource, currentId);
-        }
-
-        // 如果有 shortdrama_id，额外添加短剧源到可用源列表
-        // 即使已经有其他源，也尝试添加短剧源到换源列表中
-        if (shortdramaId) {
-          try {
-            console.log('🔍 尝试获取短剧源详情，ID:', shortdramaId);
-            const shortdramaSource = await fetchSourceDetail('shortdrama', shortdramaId);
-            console.log('📦 短剧源返回数据:', shortdramaSource);
-
-            // 检查短剧源是否有有效数据（必须有 episodes 且 episodes 不为空）
-            if (shortdramaSource.length > 0 &&
-                shortdramaSource[0].episodes &&
-                shortdramaSource[0].episodes.length > 0) {
-              console.log('✅ 短剧源有有效数据，episodes 数量:', shortdramaSource[0].episodes.length);
-              // 检查是否已存在相同的短剧源，避免重复
-              const existingShortdrama = sourcesInfo.find(
-                (s) => s.source === 'shortdrama' && s.id === shortdramaId
-              );
-              if (!existingShortdrama) {
-                sourcesInfo.push(...shortdramaSource);
-                // 重新设置 availableSources 以包含短剧源（按权重排序）
-                sourcesInfo = await setAvailableSourcesWithWeight(sourcesInfo);
-                console.log('✅ 短剧源已添加到换源列表');
-              } else {
-                console.log('⚠️ 短剧源已存在，跳过添加');
-              }
-            } else {
-              console.log('⚠️ 短剧源没有有效的集数数据，跳过添加', {
-                length: shortdramaSource.length,
-                hasEpisodes: shortdramaSource[0]?.episodes,
-                episodesLength: shortdramaSource[0]?.episodes?.length
-              });
-            }
-          } catch (error) {
-            console.error('❌ 添加短剧源失败:', error);
+      // 如果已经有了source和id，优先通过单个详情接口快速获取
+      if (currentSource && currentId) {
+        // 先快速获取当前源的详情
+        try {
+          const currentSourceDetail = await fetchSourceDetail(
+            currentSource,
+            currentId
+          );
+          if (currentSourceDetail.length > 0) {
+            detailData = currentSourceDetail[0];
+            sourcesInfo = currentSourceDetail;
           }
+        } catch (err) {
+          console.error('获取当前源详情失败:', err);
         }
+
+        // 异步获取其他源信息，不阻塞播放
+        fetchSourcesData(searchTitle || videoTitle).then((sources) => {
+          // 合并当前源和搜索到的其他源
+          const allSources = [...sourcesInfo];
+          sources.forEach((source) => {
+            // 避免重复添加当前源
+            if (!(source.source === currentSource && source.id === currentId)) {
+              allSources.push(source);
+            }
+          });
+          setAvailableSources(allSources);
+        }).catch((err) => {
+          console.error('异步获取其他源失败:', err);
+        });
+      } else {
+        // 没有source和id，正常搜索流程
+        sourcesInfo = await fetchSourcesData(searchTitle || videoTitle);
       }
-      if (sourcesInfo.length === 0) {
+
+      if (!detailData && sourcesInfo.length === 0) {
         setError('未找到匹配结果');
         setLoading(false);
         return;
       }
 
-      let detailData: SearchResult = sourcesInfo[0];
-      // 指定源和id且无需优选
-      if (currentSource && currentId && !needPreferRef.current) {
-        const target = sourcesInfo.find(
-          (source) => source.source === currentSource && source.id === currentId
-        );
-        if (target) {
-          detailData = target;
-
-          // 如果是 emby 源且 episodes 为空，需要调用 detail 接口获取完整信息
-          if ((detailData.source === 'emby' || detailData.source.startsWith('emby_')) && (!detailData.episodes || detailData.episodes.length === 0)) {
-            console.log('[Play] Emby source has no episodes, fetching detail...');
-            const detailSources = await fetchSourceDetail(currentSource, currentId);
-            if (detailSources.length > 0) {
-              detailData = detailSources[0];
-            }
-          }
-        } else {
-          setError('未找到匹配结果');
-          setLoading(false);
-          return;
-        }
+      if (!detailData) {
+        detailData = sourcesInfo[0];
       }
 
       // 未指定源和 id 或需要优选，且开启优选开关
