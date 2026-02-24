@@ -112,11 +112,11 @@ export default function ModernNav({ showAIButton = false, onAIButtonClick }: Mod
       });
     }
 
-    // 私人影库
+    // Emby
     if (runtimeConfig?.PRIVATE_LIBRARY_ENABLED) {
       newItems.push({
         icon: FolderOpen,
-        label: '私人影库',
+        label: 'Emby',
         href: '/private-library',
         color: 'text-indigo-500',
         gradient: 'from-indigo-500 to-purple-500',
