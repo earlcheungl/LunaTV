@@ -144,6 +144,20 @@ export const UserMenu: React.FC = () => {
   // 精确搜索开关
   const [exactSearch, setExactSearch] = useState(true);
 
+  // Emby 配置相关状态
+  const [embyConfig, setEmbyConfig] = useState<{
+    sources: Array<{
+      key: string;
+      name: string;
+      enabled: boolean;
+      ServerURL: string;
+      ApiKey?: string;
+      Username?: string;
+      Password?: string;
+    }>;
+  }>({ sources: [] });
+  const [embySaving, setEmbySaving] = useState(false);
+
   // 豆瓣数据源选项
   const doubanDataSourceOptions = [
     { value: 'direct', label: '直连（服务器直接请求豆瓣）' },
@@ -257,6 +271,20 @@ export const UserMenu: React.FC = () => {
       setAuthInfo(auth);
     }
   }, []);
+
+  // 加载用户 Emby 配置
+  useEffect(() => {
+    if (isSettingsOpen) {
+      fetch('/api/user/emby-config')
+        .then(res => res.json())
+        .then(data => {
+          if (data.success && data.config) {
+            setEmbyConfig(data.config);
+          }
+        })
+        .catch(err => console.error('加载 Emby 配置失败:', err));
+    }
+  }, [isSettingsOpen]);
 
   // 🚀 观影室配置和下载配置由 TanStack Query 自动管理
 
@@ -873,6 +901,58 @@ export const UserMenu: React.FC = () => {
     }
   };
 
+  // Emby 配置相关函数
+  const handleSaveEmbyConfig = async () => {
+    setEmbySaving(true);
+    try {
+      const res = await fetch('/api/user/emby-config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ config: embyConfig }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert('Emby 配置保存成功！');
+        // 刷新导航（触发 ModernNav 重新检查配置）
+        window.location.reload();
+      } else {
+        alert(`保存失败: ${data.error}`);
+      }
+    } catch (err) {
+      console.error('保存 Emby 配置失败:', err);
+      alert('保存失败，请重试');
+    } finally {
+      setEmbySaving(false);
+    }
+  };
+
+  const handleAddEmbySource = () => {
+    setEmbyConfig({
+      sources: [
+        ...embyConfig.sources,
+        {
+          key: `emby_${Date.now()}`,
+          name: '新 Emby 源',
+          enabled: true,
+          ServerURL: '',
+          ApiKey: '',
+        },
+      ],
+    });
+  };
+
+  const handleRemoveEmbySource = (index: number) => {
+    setEmbyConfig({
+      sources: embyConfig.sources.filter((_, i) => i !== index),
+    });
+  };
+
+  const handleUpdateEmbySource = (index: number, field: string, value: any) => {
+    const newSources = [...embyConfig.sources];
+    (newSources[index] as any)[field] = value;
+    setEmbyConfig({ sources: newSources });
+  };
+
   const handleResetSettings = () => {
     const defaultDoubanProxyType =
       (window as any).RUNTIME_CONFIG?.DOUBAN_PROXY_TYPE || 'direct';
@@ -1257,6 +1337,113 @@ export const UserMenu: React.FC = () => {
 
           {/* 设置项 */}
           <div className='space-y-6'>
+            {/* Emby 配置 */}
+            <div className='space-y-3'>
+              <div className='flex items-center justify-between'>
+                <div>
+                  <h4 className='text-sm font-medium text-gray-700 dark:text-gray-300'>
+                    Emby 配置
+                  </h4>
+                  <p className='text-xs text-gray-500 dark:text-gray-400 mt-1'>
+                    配置你的私人 Emby 服务器
+                  </p>
+                </div>
+                <button
+                  onClick={handleAddEmbySource}
+                  className='px-3 py-1.5 text-xs font-medium text-white bg-green-500 hover:bg-green-600 rounded-lg transition-colors'
+                >
+                  添加源
+                </button>
+              </div>
+
+              {embyConfig.sources.length === 0 ? (
+                <div className='text-sm text-gray-500 dark:text-gray-400 text-center py-4 bg-gray-50 dark:bg-gray-800 rounded-lg'>
+                  暂无 Emby 源，点击"添加源"开始配置
+                </div>
+              ) : (
+                <div className='space-y-4'>
+                  {embyConfig.sources.map((source, index) => (
+                    <div
+                      key={source.key}
+                      className='p-4 border border-gray-200 dark:border-gray-700 rounded-lg space-y-3'
+                    >
+                      <div className='flex items-center justify-between'>
+                        <input
+                          type='text'
+                          value={source.name}
+                          onChange={(e) => handleUpdateEmbySource(index, 'name', e.target.value)}
+                          className='flex-1 px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100'
+                          placeholder='源名称'
+                        />
+                        <button
+                          onClick={() => handleRemoveEmbySource(index)}
+                          className='ml-2 px-2 py-1 text-xs text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300'
+                        >
+                          删除
+                        </button>
+                      </div>
+
+                      <input
+                        type='text'
+                        value={source.ServerURL}
+                        onChange={(e) => handleUpdateEmbySource(index, 'ServerURL', e.target.value)}
+                        className='w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100'
+                        placeholder='服务器地址 (如: http://192.168.1.100:8096)'
+                      />
+
+                      <input
+                        type='text'
+                        value={source.ApiKey || ''}
+                        onChange={(e) => handleUpdateEmbySource(index, 'ApiKey', e.target.value)}
+                        className='w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100'
+                        placeholder='API Key (推荐)'
+                      />
+
+                      <div className='flex items-center gap-2'>
+                        <input
+                          type='text'
+                          value={source.Username || ''}
+                          onChange={(e) => handleUpdateEmbySource(index, 'Username', e.target.value)}
+                          className='flex-1 px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100'
+                          placeholder='用户名 (可选)'
+                        />
+                        <input
+                          type='password'
+                          value={source.Password || ''}
+                          onChange={(e) => handleUpdateEmbySource(index, 'Password', e.target.value)}
+                          className='flex-1 px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100'
+                          placeholder='密码 (可选)'
+                        />
+                      </div>
+
+                      <label className='flex items-center gap-2 text-sm'>
+                        <input
+                          type='checkbox'
+                          checked={source.enabled}
+                          onChange={(e) => handleUpdateEmbySource(index, 'enabled', e.target.checked)}
+                          className='w-4 h-4 text-green-500 border-gray-300 rounded focus:ring-green-500'
+                        />
+                        <span className='text-gray-700 dark:text-gray-300'>启用此源</span>
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {embyConfig.sources.length > 0 && (
+                <button
+                  onClick={handleSaveEmbyConfig}
+                  disabled={embySaving}
+                  className='w-full px-4 py-2 text-sm font-medium text-white bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 rounded-lg transition-colors'
+                >
+                  {embySaving ? '保存中...' : '保存 Emby 配置'}
+                </button>
+              )}
+            </div>
+
+            {/* 分割线 */}
+            <div className='border-t border-gray-200 dark:border-gray-700'></div>
+
             {/* 豆瓣数据源选择 */}
             <div className='space-y-3'>
               <div>
