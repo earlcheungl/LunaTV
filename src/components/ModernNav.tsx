@@ -128,7 +128,9 @@ export default function ModernNav({ showAIButton = false, onAIButtonClick }: Mod
 
     // Emby - 检查用户是否配置了 Emby
     const hasEmbyConfig = userEmbyConfig?.sources?.some((s: any) => s.enabled && s.ServerURL);
-    if (hasEmbyConfig) {
+    const hasEmbyInMenu = newItems.some(item => item.href === '/private-library');
+
+    if (hasEmbyConfig && !hasEmbyInMenu) {
       newItems.push({
         icon: FolderOpen,
         label: 'Emby',
@@ -136,9 +138,15 @@ export default function ModernNav({ showAIButton = false, onAIButtonClick }: Mod
         color: 'text-indigo-500',
         gradient: 'from-indigo-500 to-purple-500',
       });
+    } else if (!hasEmbyConfig && hasEmbyInMenu) {
+      // 如果用户删除了所有 Emby 配置，移除导航项
+      const index = newItems.findIndex(item => item.href === '/private-library');
+      if (index > -1) {
+        newItems.splice(index, 1);
+      }
     }
 
-    if (newItems.length > menuItems.length) {
+    if (newItems.length !== menuItems.length) {
       setMenuItems(newItems);
     }
   }, [userEmbyConfig]);
