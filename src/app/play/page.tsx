@@ -5993,7 +5993,9 @@ function PlayPageClient() {
 
         // 批量下载多集
         let successCount = 0;
+        let hasAttempted = false;
         for (const episodeIndex of episodeIndexes) {
+          hasAttempted = true;
           try {
             let episodeUrl = detail.episodes[episodeIndex];
             if (!episodeUrl) continue;
@@ -6048,8 +6050,8 @@ function PlayPageClient() {
           }
         }
 
-        // 如果至少有一个任务创建成功，自动打开下载面板
-        if (successCount > 0) {
+        // 如果尝试过下载，就打开下载面板（即使失败也打开，让用户看到错误）
+        if (hasAttempted) {
           setShowDownloadPanel(true);
         }
       }}
