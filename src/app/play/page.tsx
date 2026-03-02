@@ -5982,6 +5982,8 @@ function PlayPageClient() {
               referer,
               origin,
             });
+            // 自动打开下载面板
+            setShowDownloadPanel(true);
           } catch (error) {
             console.error('创建下载任务失败:', error);
             alert('创建下载任务失败: ' + (error as Error).message);
@@ -5990,10 +5992,37 @@ function PlayPageClient() {
         }
 
         // 批量下载多集
+        let successCount = 0;
         for (const episodeIndex of episodeIndexes) {
           try {
-            const episodeUrl = detail.episodes[episodeIndex];
+            let episodeUrl = detail.episodes[episodeIndex];
             if (!episodeUrl) continue;
+
+            // 检查是否为短剧格式，需要先解析
+            if (episodeUrl.startsWith('shortdrama:')) {
+              try {
+                const [, videoId, episode] = episodeUrl.split(':');
+                const nameParam = detail.drama_name ? `&name=${encodeURIComponent(detail.drama_name)}` : '';
+                const response = await fetch(
+                  `/api/shortdrama/parse?id=${videoId}&episode=${episode}${nameParam}`
+                );
+
+                if (response.ok) {
+                  const result = await response.json();
+                  episodeUrl = result.url || '';
+                  if (!episodeUrl) {
+                    console.warn(`第${episodeIndex + 1}集解析失败，跳过`);
+                    continue;
+                  }
+                } else {
+                  console.warn(`第${episodeIndex + 1}集解析失败，跳过`);
+                  continue;
+                }
+              } catch (parseError) {
+                console.error(`第${episodeIndex + 1}集短剧URL解析失败:`, parseError);
+                continue;
+              }
+            }
 
             // 检查是否是M3U8
             if (!episodeUrl.includes('.m3u8')) {
@@ -6013,9 +6042,15 @@ function PlayPageClient() {
               referer,
               origin,
             });
+            successCount++;
           } catch (error) {
             console.error(`创建第${episodeIndex + 1}集下载任务失败:`, error);
           }
+        }
+
+        // 如果至少有一个任务创建成功，自动打开下载面板
+        if (successCount > 0) {
+          setShowDownloadPanel(true);
         }
       }}
       />
