@@ -338,7 +338,7 @@ function ShortDramaCard({
           />
 
           <img
-            src={drama.cover}
+            src={drama.cover ? `/api/proxy/shortdrama?url=${encodeURIComponent(drama.cover)}` : '/placeholder-cover.jpg'}
             alt={drama.name}
             className={`h-full w-full object-cover transition-all duration-700 ease-out ${
               imageLoaded ? 'opacity-100 blur-0 scale-100 group-hover:scale-105' : 'opacity-0 blur-md scale-105'
@@ -349,14 +349,8 @@ function ShortDramaCard({
               setImageLoaded(true);
             }}
             onError={(e) => {
-              const img = e.target as HTMLImageElement;
-              const current = img.src;
-              if (current.startsWith('https://')) {
-                img.src = current.replace('https://', 'http://');
-              } else {
-                img.src = '/placeholder-cover.jpg';
-                setImageLoaded(true);
-              }
+              (e.target as HTMLImageElement).src = '/placeholder-cover.jpg';
+              setImageLoaded(true);
             }}
           />
 
