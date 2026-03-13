@@ -118,6 +118,8 @@ function PlayPageClient() {
 
   // 收藏状态
   const [favorited, setFavorited] = useState(false);
+  // 追踪当前收藏实际存储的 key（source+id），用于切换源后正确删除
+  const favoritedKeyRef = useRef<string | null>(null);
 
   // 返回顶部按钮显示状态
   const [showBackToTop, setShowBackToTop] = useState(false);
@@ -3416,9 +3418,10 @@ function PlayPageClient() {
           shortdramaId ? `shortdrama+${shortdramaId}` : null, // 短剧收藏
         ].filter(Boolean);
 
-        // 检查是否任一key已被收藏
-        const fav = possibleKeys.some(key => !!favorites[key as string]);
-        setFavorited(fav);
+        // 找到实际存储的收藏key
+        const matchedKey = possibleKeys.find(key => !!favorites[key as string]) || null;
+        favoritedKeyRef.current = matchedKey;
+        setFavorited(!!matchedKey);
       } catch (err) {
         console.error('检查收藏状态失败:', err);
       }
@@ -3440,9 +3443,10 @@ function PlayPageClient() {
           shortdramaId ? `shortdrama+${shortdramaId}` : null, // 短剧收藏
         ].filter(Boolean);
 
-        // 检查是否任一key已被收藏
-        const isFav = possibleKeys.some(key => !!favorites[key as string]);
-        setFavorited(isFav);
+        // 找到实际存储的收藏key
+        const matchedKey = possibleKeys.find(key => !!favorites[key as string]) || null;
+        favoritedKeyRef.current = matchedKey;
+        setFavorited(!!matchedKey);
       }
     );
 
@@ -3557,14 +3561,18 @@ function PlayPageClient() {
       return;
 
     if (favorited) {
-      // 如果已收藏，删除收藏
+      // 如果已收藏，使用实际存储的key来删除（可能和当前源不同）
+      const keyToDelete = favoritedKeyRef.current || `${currentSourceRef.current}+${currentIdRef.current}`;
+      const [delSource, delId] = keyToDelete.split('+');
+
       deleteFavoriteMutation.mutate(
         {
-          source: currentSourceRef.current,
-          id: currentIdRef.current,
+          source: delSource,
+          id: delId,
         },
         {
           onSuccess: () => {
+            favoritedKeyRef.current = null;
             setFavorited(false);
           },
           onError: (err) => {
@@ -3593,6 +3601,8 @@ function PlayPageClient() {
         contentType = 'shortdrama';
       }
 
+      const newKey = `${currentSourceRef.current}+${currentIdRef.current}`;
+
       // 如果未收藏，添加收藏
       saveFavoriteMutation.mutate(
         {
@@ -3611,6 +3621,7 @@ function PlayPageClient() {
         },
         {
           onSuccess: () => {
+            favoritedKeyRef.current = newKey;
             setFavorited(true);
           },
           onError: (err) => {
