@@ -4,7 +4,7 @@
 
 'use client';
 
-import { Suspense, useEffect, useRef, useState } from 'react';
+import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import Hls from 'hls.js';
 import { Heart, ChevronUp, Download, X } from 'lucide-react';
@@ -3403,20 +3403,37 @@ function PlayPageClient() {
   // ---------------------------------------------------------------------------
   // 收藏相关
   // ---------------------------------------------------------------------------
+
+  // 构建所有可能的收藏key（当前源 + 所有已知可用源 + 豆瓣/Bangumi/短剧虚拟源）
+  const buildPossibleFavoriteKeys = useCallback((): string[] => {
+    const keys: string[] = [];
+    // 当前真实播放源
+    if (currentSource && currentId) {
+      keys.push(`${currentSource}+${currentId}`);
+    }
+    // 所有已知的可用源（切换源后也能匹配到原来的收藏）
+    for (const src of availableSourcesRef.current) {
+      const k = `${src.source}+${src.id}`;
+      if (!keys.includes(k)) keys.push(k);
+    }
+    // 豆瓣/Bangumi/短剧虚拟源
+    if (videoDoubanId) {
+      if (!keys.includes(`douban+${videoDoubanId}`)) keys.push(`douban+${videoDoubanId}`);
+      if (!keys.includes(`bangumi+${videoDoubanId}`)) keys.push(`bangumi+${videoDoubanId}`);
+    }
+    if (shortdramaId) {
+      if (!keys.includes(`shortdrama+${shortdramaId}`)) keys.push(`shortdrama+${shortdramaId}`);
+    }
+    return keys;
+  }, [currentSource, currentId, videoDoubanId, shortdramaId]);
+
   // 每当 source 或 id 变化时检查收藏状态（支持豆瓣/Bangumi等虚拟源）
   useEffect(() => {
     if (!currentSource || !currentId) return;
     (async () => {
       try {
         const favorites = await getAllFavorites();
-
-        // 检查多个可能的收藏key
-        const possibleKeys = [
-          `${currentSource}+${currentId}`, // 当前真实播放源
-          videoDoubanId ? `douban+${videoDoubanId}` : null, // 豆瓣收藏
-          videoDoubanId ? `bangumi+${videoDoubanId}` : null, // Bangumi收藏
-          shortdramaId ? `shortdrama+${shortdramaId}` : null, // 短剧收藏
-        ].filter(Boolean);
+        const possibleKeys = buildPossibleFavoriteKeys();
 
         // 找到实际存储的收藏key
         const matchedKey = possibleKeys.find(key => !!favorites[key as string]) || null;
@@ -3435,13 +3452,7 @@ function PlayPageClient() {
     const unsubscribe = subscribeToDataUpdates(
       'favoritesUpdated',
       (favorites: Record<string, any>) => {
-        // 检查多个可能的收藏key
-        const possibleKeys = [
-          generateStorageKey(currentSource, currentId), // 当前真实播放源
-          videoDoubanId ? `douban+${videoDoubanId}` : null, // 豆瓣收藏
-          videoDoubanId ? `bangumi+${videoDoubanId}` : null, // Bangumi收藏
-          shortdramaId ? `shortdrama+${shortdramaId}` : null, // 短剧收藏
-        ].filter(Boolean);
+        const possibleKeys = buildPossibleFavoriteKeys();
 
         // 找到实际存储的收藏key
         const matchedKey = possibleKeys.find(key => !!favorites[key as string]) || null;
@@ -3451,7 +3462,7 @@ function PlayPageClient() {
     );
 
     return unsubscribe;
-  }, [currentSource, currentId, videoDoubanId, shortdramaId]);
+  }, [currentSource, currentId, videoDoubanId, shortdramaId, buildPossibleFavoriteKeys]);
 
   // 自动更新收藏的集数和片源信息（支持豆瓣/Bangumi/短剧等虚拟源）
   useEffect(() => {
@@ -3462,12 +3473,7 @@ function PlayPageClient() {
         const realEpisodes = detail.episodes.length || 1;
         const favorites = await getAllFavorites();
 
-        // 检查多个可能的收藏key
-        const possibleKeys = [
-          `${currentSource}+${currentId}`, // 当前真实播放源
-          videoDoubanId ? `douban+${videoDoubanId}` : null, // 豆瓣收藏
-          videoDoubanId ? `bangumi+${videoDoubanId}` : null, // Bangumi收藏
-        ].filter(Boolean);
+        const possibleKeys = buildPossibleFavoriteKeys();
 
         let favoriteToUpdate = null;
         let favoriteKey = '';
