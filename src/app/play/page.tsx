@@ -3404,27 +3404,35 @@ function PlayPageClient() {
   // 收藏相关
   // ---------------------------------------------------------------------------
 
-  // 构建所有可能的收藏key（当前源 + 所有已知可用源 + 豆瓣/Bangumi/短剧虚拟源）
-  const buildPossibleFavoriteKeys = useCallback((): string[] => {
-    const keys: string[] = [];
-    // 当前真实播放源
-    if (currentSource && currentId) {
-      keys.push(`${currentSource}+${currentId}`);
-    }
-    // 所有已知的可用源（切换源后也能匹配到原来的收藏）
-    for (const src of availableSourcesRef.current) {
-      const k = `${src.source}+${src.id}`;
-      if (!keys.includes(k)) keys.push(k);
-    }
-    // 豆瓣/Bangumi/短剧虚拟源
+  // 在收藏列表中查找匹配的收藏（按 key 精确匹配 + 按 title 模糊匹配）
+  const findMatchedFavoriteKey = useCallback((
+    favorites: Record<string, any>,
+  ): string | null => {
+    // 1. 精确匹配：当前源 key
+    const currentKey = currentSource && currentId ? `${currentSource}+${currentId}` : null;
+    if (currentKey && favorites[currentKey]) return currentKey;
+
+    // 2. 精确匹配：豆瓣/Bangumi/短剧虚拟源
     if (videoDoubanId) {
-      if (!keys.includes(`douban+${videoDoubanId}`)) keys.push(`douban+${videoDoubanId}`);
-      if (!keys.includes(`bangumi+${videoDoubanId}`)) keys.push(`bangumi+${videoDoubanId}`);
+      const doubanKey = `douban+${videoDoubanId}`;
+      if (favorites[doubanKey]) return doubanKey;
+      const bangumiKey = `bangumi+${videoDoubanId}`;
+      if (favorites[bangumiKey]) return bangumiKey;
     }
     if (shortdramaId) {
-      if (!keys.includes(`shortdrama+${shortdramaId}`)) keys.push(`shortdrama+${shortdramaId}`);
+      const sdKey = `shortdrama+${shortdramaId}`;
+      if (favorites[sdKey]) return sdKey;
     }
-    return keys;
+
+    // 3. 按 title 匹配：同一部片在不同源有不同 source+id，用标题兜底
+    const title = videoTitleRef.current;
+    if (title) {
+      for (const [key, fav] of Object.entries(favorites)) {
+        if ((fav as any)?.title === title) return key;
+      }
+    }
+
+    return null;
   }, [currentSource, currentId, videoDoubanId, shortdramaId]);
 
   // 每当 source 或 id 变化时检查收藏状态（支持豆瓣/Bangumi等虚拟源）
@@ -3433,17 +3441,15 @@ function PlayPageClient() {
     (async () => {
       try {
         const favorites = await getAllFavorites();
-        const possibleKeys = buildPossibleFavoriteKeys();
 
-        // 找到实际存储的收藏key
-        const matchedKey = possibleKeys.find(key => !!favorites[key as string]) || null;
+        const matchedKey = findMatchedFavoriteKey(favorites);
         favoritedKeyRef.current = matchedKey;
         setFavorited(!!matchedKey);
       } catch (err) {
         console.error('检查收藏状态失败:', err);
       }
     })();
-  }, [currentSource, currentId, videoDoubanId, shortdramaId]);
+  }, [currentSource, currentId, videoDoubanId, shortdramaId, findMatchedFavoriteKey]);
 
   // 监听收藏数据更新事件（支持豆瓣/Bangumi等虚拟源）
   useEffect(() => {
@@ -3452,17 +3458,14 @@ function PlayPageClient() {
     const unsubscribe = subscribeToDataUpdates(
       'favoritesUpdated',
       (favorites: Record<string, any>) => {
-        const possibleKeys = buildPossibleFavoriteKeys();
-
-        // 找到实际存储的收藏key
-        const matchedKey = possibleKeys.find(key => !!favorites[key as string]) || null;
+        const matchedKey = findMatchedFavoriteKey(favorites);
         favoritedKeyRef.current = matchedKey;
         setFavorited(!!matchedKey);
       }
     );
 
     return unsubscribe;
-  }, [currentSource, currentId, videoDoubanId, shortdramaId, buildPossibleFavoriteKeys]);
+  }, [currentSource, currentId, videoDoubanId, shortdramaId, findMatchedFavoriteKey]);
 
   // 自动更新收藏的集数和片源信息（支持豆瓣/Bangumi/短剧等虚拟源）
   useEffect(() => {
@@ -3473,21 +3476,9 @@ function PlayPageClient() {
         const realEpisodes = detail.episodes.length || 1;
         const favorites = await getAllFavorites();
 
-        const possibleKeys = buildPossibleFavoriteKeys();
-
-        let favoriteToUpdate = null;
-        let favoriteKey = '';
-
-        // 找到已存在的收藏
-        for (const key of possibleKeys) {
-          if (favorites[key as string]) {
-            favoriteToUpdate = favorites[key as string];
-            favoriteKey = key as string;
-            break;
-          }
-        }
-
-        if (!favoriteToUpdate) return;
+        const favoriteKey = findMatchedFavoriteKey(favorites);
+        if (!favoriteKey) return;
+        const favoriteToUpdate = favorites[favoriteKey];
 
         // 检查是否需要更新（集数不同或缺少片源信息）
         const needsUpdate =
