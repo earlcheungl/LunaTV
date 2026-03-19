@@ -72,13 +72,7 @@ function LoginPageClient() {
   const [username, setUsername] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [shouldAskUsername] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const storageType = (window as any).RUNTIME_CONFIG?.STORAGE_TYPE;
-      return !!(storageType && storageType !== 'localstorage');
-    }
-    return false;
-  });
+  const shouldAskUsername = process.env.NEXT_PUBLIC_STORAGE_TYPE !== 'localstorage';
   const [bingWallpaper, setBingWallpaper] = useState<string>('');
 
   // Telegram Magic Link 状态
