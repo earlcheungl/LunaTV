@@ -1,7 +1,7 @@
 /* eslint-disable react-hooks/exhaustive-deps, @typescript-eslint/no-explicit-any,@typescript-eslint/no-non-null-assertion,no-empty */
 'use client';
 
-import { ChevronUp, Grid2x2, List, Search, X } from 'lucide-react';
+import { ChevronUp, Grid2x2, List, Play, Search, X } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import React, { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery, experimental_streamedQuery as streamedQuery } from '@tanstack/react-query';
@@ -253,33 +253,42 @@ function SearchPageClient() {
             />
           </div>
           <div className='min-w-0 flex-1'>
-            <h3 className='line-clamp-2 text-base font-semibold text-gray-900 dark:text-gray-100'>
-              {item.title}
-            </h3>
-            <div className='mt-2 flex flex-wrap gap-2'>
-              {renderTag(
-                item.type === 'movie' ? '电影' : '剧集',
-                'bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300'
-              )}
-              {yearText && renderTag(yearText, 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300')}
-              {item.episodes && item.episodes > 0 && renderTag(
-                `${item.episodes}集`,
-                'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
-              )}
-              {item.vodRemarks && renderTag(
-                item.vodRemarks,
-                'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'
-              )}
-              {item.doubanId && item.doubanId > 0 && renderTag(
-                '豆瓣',
-                'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
-              )}
+            <div className='flex items-start justify-between gap-3'>
+              <div className='min-w-0 flex-1'>
+                <h3 className='line-clamp-2 text-base font-semibold text-gray-900 dark:text-gray-100'>
+                  {item.title}
+                </h3>
+                <div className='mt-2 flex flex-wrap gap-2'>
+                  {renderTag(
+                    item.type === 'movie' ? '电影' : '剧集',
+                    'bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300'
+                  )}
+                  {yearText && renderTag(yearText, 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300')}
+                  {item.episodes && item.episodes > 0 && renderTag(
+                    `${item.episodes}集`,
+                    'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+                  )}
+                  {item.vodRemarks && renderTag(
+                    item.vodRemarks,
+                    'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'
+                  )}
+                  {item.doubanId && item.doubanId > 0 && renderTag(
+                    '豆瓣',
+                    'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
+                  )}
+                </div>
+                {description && (
+                  <p className='mt-3 line-clamp-3 text-sm leading-6 text-gray-600 dark:text-gray-400'>
+                    {description}
+                  </p>
+                )}
+              </div>
+              <div className='shrink-0 self-center'>
+                <div className='flex h-10 w-10 items-center justify-center rounded-full bg-green-500 text-white shadow-md transition-transform group-hover:scale-110 group-hover:bg-green-600'>
+                  <Play className='h-4 w-4 translate-x-0.5' fill='currentColor' />
+                </div>
+              </div>
             </div>
-            {description && (
-              <p className='mt-3 line-clamp-3 text-sm leading-6 text-gray-600 dark:text-gray-400'>
-                {description}
-              </p>
-            )}
           </div>
         </div>
         {sourceTags.length > 0 && (
