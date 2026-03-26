@@ -36,7 +36,37 @@ interface EmbyItem {
       Codec?: string;
       IsExternal?: boolean;
       DeliveryUrl?: string;
+      IsDefault?: boolean;
     }>;
+  }>;
+}
+
+interface AudioStream {
+  index: number;
+  displayTitle?: string;
+  language?: string;
+  codec?: string;
+  isDefault: boolean;
+}
+
+interface PlaybackInfoResponse {
+  MediaSources?: Array<{
+    MediaStreams?: Array<{
+      Type?: string;
+      Index?: number;
+      DisplayTitle?: string;
+      Language?: string;
+      Codec?: string;
+      IsDefault?: boolean;
+    }>;
+  }>;
+  MediaStreams?: Array<{
+    Type?: string;
+    Index?: number;
+    DisplayTitle?: string;
+    Language?: string;
+    Codec?: string;
+    IsDefault?: boolean;
   }>;
 }
 
@@ -498,7 +528,79 @@ export class EmbyClient {
     }
   }
 
-  async getStreamUrl(itemId: string, direct = true, forceDirectUrl = false): Promise<string> {
+  /**
+   * 获取媒体项的音轨列表
+   */
+  async getAudioStreams(itemId: string): Promise<AudioStream[]> {
+    await this.ensureAuthenticated();
+
+    if (!this.userId) {
+      throw new Error('未配置 Emby 用户 ID');
+    }
+
+    const token = this.apiKey || this.authToken;
+
+    // 尝试从 PlaybackInfo 获取音轨信息
+    try {
+      const playbackInfoUrl = `${this.serverUrl}/Items/${itemId}/PlaybackInfo?UserId=${this.userId}${token ? `&api_key=${token}` : ''}`;
+
+      const response = await fetch(playbackInfoUrl, {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify({
+          UserId: this.userId,
+          StartTimeTicks: 0,
+          IsPlayback: true,
+          AutoOpenLiveStream: true,
+        }),
+      });
+
+      if (response.ok) {
+        const data: PlaybackInfoResponse = await response.json();
+        const streams = data.MediaSources?.[0]?.MediaStreams || data.MediaStreams || [];
+
+        const audioStreams = streams
+          .filter(stream => stream.Type?.toLowerCase() === 'audio')
+          .map(stream => ({
+            index: stream.Index ?? -1,
+            displayTitle: stream.DisplayTitle,
+            language: stream.Language,
+            codec: stream.Codec,
+            isDefault: stream.IsDefault ?? false,
+          }))
+          .filter(stream => stream.index >= 0)
+          .sort((a, b) => a.index - b.index);
+
+        if (audioStreams.length > 0) {
+          return audioStreams;
+        }
+      }
+    } catch (error) {
+      console.warn('从 PlaybackInfo 获取音轨失败，尝试从 Item 详情获取:', error);
+    }
+
+    // 回退：从 Item 详情获取
+    try {
+      const item = await this.getItem(itemId);
+      const streams = item.MediaSources?.[0]?.MediaStreams || [];
+
+      return streams
+        .filter(stream => stream.Type === 'Audio')
+        .map(stream => ({
+          index: stream.Index,
+          displayTitle: stream.DisplayTitle,
+          language: stream.Language,
+          codec: stream.Codec,
+          isDefault: stream.IsDefault ?? false,
+        }))
+        .sort((a, b) => a.index - b.index);
+    } catch (error) {
+      console.error('获取音轨信息失败:', error);
+      return [];
+    }
+  }
+
+  async getStreamUrl(itemId: string, direct = true, forceDirectUrl = false, audioStreamIndex?: number): Promise<string> {
     await this.ensureAuthenticated();
     const token = this.apiKey || this.authToken;
 
@@ -514,6 +616,11 @@ export class EmbyClient {
       // 如果有embyKey，添加到查询参数
       if (this.embyKey) {
         proxyUrl += `&embyKey=${this.embyKey}`;
+      }
+
+      // 如果指定了音轨，添加到查询参数
+      if (typeof audioStreamIndex === 'number' && audioStreamIndex >= 0) {
+        proxyUrl += `&audioStreamIndex=${audioStreamIndex}`;
       }
 
       return proxyUrl;
@@ -533,6 +640,11 @@ export class EmbyClient {
         url = `${this.serverUrl}/Videos/${itemId}/stream?Static=true&api_key=${token}`;
       }
 
+      // 如果指定了音轨索引，添加到URL
+      if (typeof audioStreamIndex === 'number' && audioStreamIndex >= 0) {
+        url += `&AudioStreamIndex=${audioStreamIndex}`;
+      }
+
       // 选项2: 拼接MediaSourceId参数
       if (this.appendMediaSourceId && !this.transcodeMp4) {
         try {
@@ -546,6 +658,11 @@ export class EmbyClient {
       }
     } else {
       url = `${this.serverUrl}/Videos/${itemId}/master.m3u8?api_key=${token}`;
+
+      // 如果指定了音轨索引，添加到URL
+      if (typeof audioStreamIndex === 'number' && audioStreamIndex >= 0) {
+        url += `&AudioStreamIndex=${audioStreamIndex}`;
+      }
     }
 
     return url;
