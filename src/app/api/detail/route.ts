@@ -96,6 +96,16 @@ export async function GET(request: NextRequest) {
       // 获取媒体详情
       const item = await client.getItem(id);
 
+      // 获取音轨信息（不影响主流程）
+      let audioStreams: any[] = [];
+      try {
+        console.log('========== [/api/detail] 开始获取音轨，itemId:', id);
+        audioStreams = await client.getAudioStreams(id);
+        console.log('========== [/api/detail] 获取到音轨数据:', audioStreams);
+      } catch (error) {
+        console.error('========== [/api/detail] 获取音轨失败（不影响播放）:', error);
+      }
+
       let result: any;
 
       if (item.Type === 'Movie') {
@@ -112,6 +122,14 @@ export async function GET(request: NextRequest) {
           episodes: [await client.getStreamUrl(item.Id)],
           episodes_titles: [item.Name],
           proxyMode: false,
+          // 添加音轨信息
+          private_audio_streams: audioStreams.map(stream => ({
+            index: stream.index,
+            display_title: stream.displayTitle,
+            language: stream.language,
+            codec: stream.codec,
+            is_default: stream.isDefault,
+          })),
         };
       } else if (item.Type === 'Series') {
         // 剧集 - 获取所有季和集
@@ -147,6 +165,14 @@ export async function GET(request: NextRequest) {
             return `S${seasonNum.toString().padStart(2, '0')}E${episodeNum.toString().padStart(2, '0')}`;
           }),
           proxyMode: false,
+          // 添加音轨信息
+          private_audio_streams: audioStreams.map(stream => ({
+            index: stream.index,
+            display_title: stream.displayTitle,
+            language: stream.language,
+            codec: stream.codec,
+            is_default: stream.isDefault,
+          })),
         };
       } else {
         throw new Error('不支持的媒体类型');
