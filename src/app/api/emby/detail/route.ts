@@ -11,6 +11,8 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const itemId = searchParams.get('id');
   const embyKey = searchParams.get('embyKey') || undefined;
+  const audioStreamIndexParam = searchParams.get('audioStreamIndex');
+  const audioStreamIndex = audioStreamIndexParam ? parseInt(audioStreamIndexParam, 10) : undefined;
 
   if (!itemId) {
     return NextResponse.json({ error: '缺少媒体ID' }, { status: 400 });
@@ -40,7 +42,7 @@ export async function GET(request: NextRequest) {
 
     if (item.Type === 'Movie') {
       // 电影：episodes数组包含一个播放URL
-      episodesUrls = [await client.getStreamUrl(item.Id)];
+      episodesUrls = [await client.getStreamUrl(item.Id, true, false, audioStreamIndex)];
     } else if (item.Type === 'Series') {
       // 电视剧：获取所有剧集的播放URL
       const allEpisodes = await client.getEpisodes(itemId);
@@ -53,7 +55,7 @@ export async function GET(request: NextRequest) {
       });
 
       episodesUrls = await Promise.all(
-        sortedEpisodes.map(ep => client.getStreamUrl(ep.Id))
+        sortedEpisodes.map(ep => client.getStreamUrl(ep.Id, true, false, audioStreamIndex))
       );
     }
 
