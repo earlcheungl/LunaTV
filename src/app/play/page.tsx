@@ -4032,6 +4032,12 @@ function PlayPageClient() {
         return;
       }
 
+    // 🔥 在初始化新播放器之前，先清理旧的播放器实例
+    if (artPlayerRef.current) {
+      console.log('[Play] 检测到旧播放器实例，先清理');
+      await cleanupPlayer();
+    }
+
     // 确保选集索引有效
     if (
       !detail ||
