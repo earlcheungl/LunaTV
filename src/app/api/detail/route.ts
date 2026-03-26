@@ -106,6 +106,26 @@ export async function GET(request: NextRequest) {
         console.error('========== [/api/detail] 获取音轨失败（不影响播放）:', error);
       }
 
+      // 🎵 自动选择浏览器兼容的音轨（AAC 优先）
+      const findCompatibleAudioTrack = (streams: any[]): number | undefined => {
+        // 优先选择 AAC stereo
+        const aacStereo = streams.find(s => s.codec === 'aac' && s.displayTitle?.includes('stereo'));
+        if (aacStereo) return aacStereo.index;
+
+        // 其次选择任意 AAC
+        const anyAac = streams.find(s => s.codec === 'aac');
+        if (anyAac) return anyAac.index;
+
+        // 最后选择 MP3
+        const mp3 = streams.find(s => s.codec === 'mp3');
+        if (mp3) return mp3.index;
+
+        return undefined;
+      };
+
+      const compatibleAudioIndex = findCompatibleAudioTrack(audioStreams);
+      console.log('========== [/api/detail] 选择的兼容音轨索引:', compatibleAudioIndex);
+
       let result: any;
 
       if (item.Type === 'Movie') {
@@ -119,7 +139,7 @@ export async function GET(request: NextRequest) {
           year: item.ProductionYear?.toString() || '',
           douban_id: 0,
           desc: item.Overview || '',
-          episodes: [await client.getStreamUrl(item.Id)],
+          episodes: [await client.getStreamUrl(item.Id, true, false, compatibleAudioIndex)],
           episodes_titles: [item.Name],
           proxyMode: false,
           // 添加音轨信息
@@ -158,7 +178,7 @@ export async function GET(request: NextRequest) {
           year: item.ProductionYear?.toString() || '',
           douban_id: 0,
           desc: item.Overview || '',
-          episodes: await Promise.all(allEpisodes.map((ep) => client.getStreamUrl(ep.Id))),
+          episodes: await Promise.all(allEpisodes.map((ep) => client.getStreamUrl(ep.Id, true, false, compatibleAudioIndex))),
           episodes_titles: allEpisodes.map((ep) => {
             const seasonNum = ep.ParentIndexNumber || 1;
             const episodeNum = ep.IndexNumber || 1;
