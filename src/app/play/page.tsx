@@ -4035,27 +4035,7 @@ function PlayPageClient() {
     // 🔥 在初始化新播放器之前，先清理旧的播放器实例
     if (artPlayerRef.current) {
       console.log('[Play] 检测到旧播放器实例，先清理');
-
-      // 🔥 关键修复：记录网页全屏状态，清理后恢复
-      // 原因：ArtPlayer设置了FULLSCREEN_WEB_IN_BODY=true时，网页全屏会把播放器移到body下
-      // 如果不先退出全屏就destroy，播放器容器位置会错乱，导致新播放器只有声音没有画面
-      // 参考ArtPlayer源码：packages/artplayer/src/player/fullscreenWebMix.js
-      const wasFullscreenWeb = artPlayerRef.current.fullscreenWeb;
-
-      if (wasFullscreenWeb) {
-        console.log('[Play] 检测到网页全屏状态，先退出网页全屏（稍后恢复）');
-        artPlayerRef.current.fullscreenWeb = false;
-        // 等待DOM恢复到原容器位置（fullscreenWeb setter会调用append($container, $player)）
-        await new Promise(resolve => setTimeout(resolve, 100));
-      }
-
       await cleanupPlayer();
-
-      // 🔥 标记需要恢复网页全屏状态
-      if (wasFullscreenWeb) {
-        // 使用一个标记，在播放器ready后恢复全屏
-        (window as any).__shouldRestoreFullscreenWeb = true;
-      }
     }
 
     // 确保选集索引有效
@@ -4182,24 +4162,39 @@ function PlayPageClient() {
 
         switchPromiseRef.current = switchPromise;
         await switchPromise;
-        
+
         if (artPlayerRef.current?.video) {
           ensureVideoSource(
             artPlayerRef.current.video as HTMLVideoElement,
             videoUrl
           );
         }
-        
+
         // 🚀 移除原有的 setTimeout 弹幕加载逻辑，交由 useEffect 统一优化处理
-        
-        console.log('使用switch方法成功切换视频');
+
+        console.log('✅ 使用switch方法成功切换视频（保持全屏状态）');
         return;
       } catch (error) {
-        console.warn('Switch方法失败，将重建播放器:', error);
+        console.warn('⚠️ Switch方法失败，将重建播放器:', error);
         // 重置集数切换标识
         isEpisodeChangingRef.current = false;
+
+        // 🔥 记录网页全屏状态，重建后恢复
+        const wasFullscreenWeb = artPlayerRef.current?.fullscreenWeb || false;
+
         // 如果switch失败，清理播放器并重新创建
+        if (wasFullscreenWeb && artPlayerRef.current) {
+          console.log('[Play] Switch失败，退出网页全屏后重建（稍后恢复）');
+          artPlayerRef.current.fullscreenWeb = false;
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+
         await cleanupPlayer();
+
+        // 标记需要恢复网页全屏
+        if (wasFullscreenWeb) {
+          (window as any).__shouldRestoreFullscreenWeb = true;
+        }
       }
     }
     if (artPlayerRef.current) {
