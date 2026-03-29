@@ -4036,18 +4036,26 @@ function PlayPageClient() {
     if (artPlayerRef.current) {
       console.log('[Play] 检测到旧播放器实例，先清理');
 
-      // 🔥 关键修复：如果处于网页全屏状态，先退出网页全屏
+      // 🔥 关键修复：记录网页全屏状态，清理后恢复
       // 原因：ArtPlayer设置了FULLSCREEN_WEB_IN_BODY=true时，网页全屏会把播放器移到body下
       // 如果不先退出全屏就destroy，播放器容器位置会错乱，导致新播放器只有声音没有画面
       // 参考ArtPlayer源码：packages/artplayer/src/player/fullscreenWebMix.js
-      if (artPlayerRef.current.fullscreenWeb) {
-        console.log('[Play] 检测到网页全屏状态，先退出网页全屏');
+      const wasFullscreenWeb = artPlayerRef.current.fullscreenWeb;
+
+      if (wasFullscreenWeb) {
+        console.log('[Play] 检测到网页全屏状态，先退出网页全屏（稍后恢复）');
         artPlayerRef.current.fullscreenWeb = false;
         // 等待DOM恢复到原容器位置（fullscreenWeb setter会调用append($container, $player)）
         await new Promise(resolve => setTimeout(resolve, 100));
       }
 
       await cleanupPlayer();
+
+      // 🔥 标记需要恢复网页全屏状态
+      if (wasFullscreenWeb) {
+        // 使用一个标记，在播放器ready后恢复全屏
+        (window as any).__shouldRestoreFullscreenWeb = true;
+      }
     }
 
     // 确保选集索引有效
@@ -4808,6 +4816,18 @@ function PlayPageClient() {
       artPlayerRef.current.on('ready', async () => {
         setError(null);
         setPlayerReady(true); // 标记播放器已就绪，启用观影室同步
+
+        // 🔥 恢复网页全屏状态（如果之前是全屏的）
+        if ((window as any).__shouldRestoreFullscreenWeb) {
+          console.log('[Play] 恢复网页全屏状态');
+          // 延迟一下确保播放器完全初始化
+          setTimeout(() => {
+            if (artPlayerRef.current) {
+              artPlayerRef.current.fullscreenWeb = true;
+            }
+            (window as any).__shouldRestoreFullscreenWeb = false;
+          }, 200);
+        }
 
         // 使用ArtPlayer layers API添加分辨率徽章（带渐变和发光效果）
         const video = artPlayerRef.current.video as HTMLVideoElement;
