@@ -708,7 +708,7 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
           );
 
           const favoriteLabel = isUpcoming ? (
-            currentState ? '取消提醒' : '提醒我'
+            currentState ? '取消想看' : '想看'
           ) : (
             currentState ? '取消收藏' : '添加收藏'
           );
@@ -729,7 +729,7 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
         } else {
           // 正在加载中，显示占位项
           const loadingIcon = isUpcoming ? <Bell size={20} /> : <Heart size={20} />;
-          const loadingLabel = isUpcoming ? '提醒加载中...' : '收藏加载中...';
+          const loadingLabel = isUpcoming ? '想看加载中...' : '收藏加载中...';
 
           actions.push({
             id: 'favorite-loading',
@@ -756,7 +756,7 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
         );
 
         const favoriteLabel = isUpcoming ? (
-          currentState ? '取消提醒' : '提醒我'
+          currentState ? '取消想看' : '想看'
         ) : (
           currentState ? '取消收藏' : '添加收藏'
         );

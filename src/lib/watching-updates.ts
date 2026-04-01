@@ -211,8 +211,8 @@ export async function checkWatchingUpdates(forceRefresh = false): Promise<void> 
 
     await Promise.all(updatePromises);
 
-    // 🎬 检查提醒中的新上映内容
-    console.log('🎬 开始检查提醒中的新上映内容...');
+    // 🎬 检查想看中的新上映内容
+    console.log('🎬 开始检查想看中的新上映内容...');
     let newReleasesCount = 0;
     try {
       const reminders = await getAllReminders();
@@ -224,7 +224,7 @@ export async function checkWatchingUpdates(forceRefresh = false): Promise<void> 
         day: '2-digit'
       }).replace(/\//g, '-'); // 转换为 YYYY-MM-DD 格式
 
-      // 筛选有releaseDate且已上映的提醒
+      // 筛选有releaseDate且已上映的想看内容
       const newReleases = Object.entries(reminders)
         .filter(([key, reminder]) => {
           // 必须有上映日期
@@ -282,12 +282,12 @@ export async function checkWatchingUpdates(forceRefresh = false): Promise<void> 
         });
 
       if (newReleases.length > 0) {
-        console.log(`🎬 发现 ${newReleases.length} 部新上映的提醒内容`);
+        console.log(`🎬 发现 ${newReleases.length} 部新上映的想看内容`);
         updatedSeries.push(...newReleases);
         newReleasesCount = newReleases.length;
         hasAnyUpdates = true;
       } else {
-        console.log('🎬 没有新上映的提醒内容');
+        console.log('🎬 没有新上映的想看内容');
       }
     } catch (error) {
       console.error('检查新上映内容失败:', error);

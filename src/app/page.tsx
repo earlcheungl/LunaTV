@@ -725,7 +725,7 @@ function HomeClient() {
             options={[
               { label: '首页', value: 'home' },
               { label: '收藏夹', value: 'favorites' },
-              { label: '提醒', value: 'reminders' },
+              { label: '想看', value: 'reminders' },
             ]}
             active={activeTab}
             onChange={(value) => startTransition(() => dispatch({ type: 'SET_ACTIVE_TAB', payload: value as 'home' | 'favorites' | 'reminders' }))}
@@ -734,11 +734,11 @@ function HomeClient() {
 
         <div className={`w-full mx-auto ${isPending ? 'opacity-70 transition-opacity duration-150' : ''}`}>
           {activeTab === 'reminders' ? (
-            // 提醒视图
+            // 想看视图
             <section className='mb-8'>
               <div className='mb-6 flex items-center justify-between'>
                 <h2 className='text-xl font-bold text-gray-800 dark:text-gray-200'>
-                  我的提醒
+                  我想看
                 </h2>
                 {reminderItems.length > 0 && (
                   <button
@@ -752,7 +752,7 @@ function HomeClient() {
                     }}
                   >
                     <Trash2 className='w-4 h-4' />
-                    <span>清空提醒</span>
+                    <span>清空想看</span>
                   </button>
                 )}
               </div>
@@ -871,10 +871,10 @@ function HomeClient() {
                     </div>
 
                     <h3 className='text-xl font-semibold text-gray-700 dark:text-gray-300 mb-2'>
-                      暂无提醒
+                      暂无想看内容
                     </h3>
                     <p className='text-sm text-gray-500 dark:text-gray-400 text-center max-w-xs'>
-                      发现即将上映的内容，点击 🔔 设置提醒吧！
+                      发现即将上映的内容，点击 🔔 标记想看吧！
                     </p>
                   </div>
                 )}
@@ -883,8 +883,8 @@ function HomeClient() {
               {/* 确认对话框 */}
               <ConfirmDialog
                 isOpen={showClearRemindersDialog}
-                title="确认清空提醒"
-                message={`确定要清空所有提醒吗？\n\n这将删除 ${reminderItems.length} 项提醒，此操作无法撤销。`}
+                title="确认清空想看"
+                message={`确定要清空所有想看内容吗？\n\n这将删除 ${reminderItems.length} 项内容，此操作无法撤销。`}
                 confirmText="确认清空"
                 cancelText="取消"
                 variant="danger"
