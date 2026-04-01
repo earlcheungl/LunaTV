@@ -248,16 +248,14 @@ function HomeClient() {
 
   // 🎯 优化：缓存今天的日期（用于上映日期计算）
   const today = useMemo(() => {
-    // 使用 Asia/Shanghai 时区
+    // 使用 Asia/Shanghai 时区，返回 YYYY-MM-DD 格式字符串（与 watching-updates.ts 保持一致）
     const dateStr = new Date().toLocaleDateString('zh-CN', {
       timeZone: 'Asia/Shanghai',
       year: 'numeric',
       month: '2-digit',
       day: '2-digit'
     });
-    const [year, month, day] = dateStr.split('/');
-    const date = new Date(Number(year), Number(month) - 1, Number(day));
-    return date;
+    return dateStr.split('/').reverse().join('-'); // "YYYY-MM-DD"
   }, []); // 空依赖，只在组件挂载时计算一次
 
   // 合并初始化逻辑 - 优化性能，减少重渲染
@@ -871,8 +869,13 @@ function HomeClient() {
                   let calculatedRemarks = item.remarks;
 
                   if (item.releaseDate) {
-                    const releaseDate = new Date(item.releaseDate);
-                    const daysDiff = Math.ceil((releaseDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+                    // 使用字符串比较日期（YYYY-MM-DD 格式可以直接比较）
+                    const releaseDate = item.releaseDate; // "YYYY-MM-DD"
+
+                    // 计算天数差异
+                    const releaseDateObj = new Date(releaseDate);
+                    const todayDateObj = new Date(today);
+                    const daysDiff = Math.ceil((releaseDateObj.getTime() - todayDateObj.getTime()) / (1000 * 60 * 60 * 24));
 
                     // 根据天数差异动态更新显示文字
                     if (daysDiff < 0) {
@@ -1070,9 +1073,10 @@ function HomeClient() {
                     {upcomingReleases
                       .filter(release => upcomingFilter === 'all' || release.type === upcomingFilter)
                       .map((release, index) => {
-                        // 计算距离上映还有几天
+                        // 计算距离上映还有几天（使用字符串格式的 today）
                         const releaseDate = new Date(release.releaseDate);
-                        const daysDiff = Math.ceil((releaseDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+                        const todayDateObj = new Date(today);
+                        const daysDiff = Math.ceil((releaseDate.getTime() - todayDateObj.getTime()) / (1000 * 60 * 60 * 24));
 
                       // 根据天数差异显示不同文字
                       let remarksText;
