@@ -264,7 +264,7 @@ function HomeClient() {
       month: '2-digit',
       day: '2-digit'
     });
-    return dateStr.split('/').reverse().join('-'); // "YYYY-MM-DD"
+    return dateStr.replace(/\//g, '-'); // "2026/04/02" -> "2026-04-02"
   }, []); // 空依赖，只在组件挂载时计算一次
 
   // 合并初始化逻辑 - 优化性能，减少重渲染

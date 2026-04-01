@@ -222,7 +222,7 @@ export async function checkWatchingUpdates(forceRefresh = false): Promise<void> 
         year: 'numeric',
         month: '2-digit',
         day: '2-digit'
-      }).split('/').reverse().join('-'); // 转换为 YYYY-MM-DD 格式
+      }).replace(/\//g, '-'); // 转换为 YYYY-MM-DD 格式
 
       // 筛选有releaseDate且已上映的提醒
       const newReleases = Object.entries(reminders)
