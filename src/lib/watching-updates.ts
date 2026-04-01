@@ -216,7 +216,13 @@ export async function checkWatchingUpdates(forceRefresh = false): Promise<void> 
     let newReleasesCount = 0;
     try {
       const favorites = await getAllFavorites();
-      const today = new Date().toISOString().split('T')[0];
+      // 使用 Asia/Shanghai 时区获取今天的日期
+      const today = new Date().toLocaleDateString('zh-CN', {
+        timeZone: 'Asia/Shanghai',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      }).split('/').reverse().join('-'); // 转换为 YYYY-MM-DD 格式
 
       // 筛选有releaseDate且已上映的收藏
       const newReleases = Object.entries(favorites)
@@ -236,6 +242,21 @@ export async function checkWatchingUpdates(forceRefresh = false): Promise<void> 
         })
         .map(([key, fav]) => {
           const [sourceName, videoId] = key.split('+');
+
+          // 重新计算 remarks，显示已上映多少天
+          let remarksText = '已上映';
+          if (fav.releaseDate) {
+            const releaseDate = new Date(fav.releaseDate);
+            const todayDate = new Date(today);
+            const daysDiff = Math.floor((todayDate.getTime() - releaseDate.getTime()) / (1000 * 60 * 60 * 24));
+
+            if (daysDiff === 0) {
+              remarksText = '今日上映';
+            } else if (daysDiff > 0) {
+              remarksText = `已上映${daysDiff}天`;
+            }
+          }
+
           return {
             title: fav.title,
             source_name: fav.source_name,
@@ -251,7 +272,7 @@ export async function checkWatchingUpdates(forceRefresh = false): Promise<void> 
             newEpisodes: 0,
             remainingEpisodes: 0,
             latestEpisodes: fav.total_episodes || 0,
-            remarks: fav.remarks || '已上映',
+            remarks: remarksText,
             releaseDate: fav.releaseDate,
           };
         });
