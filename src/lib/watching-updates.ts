@@ -1,6 +1,6 @@
 'use client';
 
-import { getAllPlayRecords, PlayRecord, generateStorageKey, forceRefreshPlayRecordsCache, savePlayRecord, getAllFavorites } from './db.client';
+import { getAllPlayRecords, PlayRecord, generateStorageKey, forceRefreshPlayRecordsCache, savePlayRecord, getAllReminders } from './db.client';
 
 // 缓存键
 const WATCHING_UPDATES_CACHE_KEY = 'moontv_watching_updates';
@@ -211,11 +211,11 @@ export async function checkWatchingUpdates(forceRefresh = false): Promise<void> 
 
     await Promise.all(updatePromises);
 
-    // 🎬 检查收藏中的新上映内容
-    console.log('🎬 开始检查收藏中的新上映内容...');
+    // 🎬 检查提醒中的新上映内容
+    console.log('🎬 开始检查提醒中的新上映内容...');
     let newReleasesCount = 0;
     try {
-      const favorites = await getAllFavorites();
+      const reminders = await getAllReminders();
       // 使用 Asia/Shanghai 时区获取今天的日期
       const today = new Date().toLocaleDateString('zh-CN', {
         timeZone: 'Asia/Shanghai',
@@ -224,29 +224,29 @@ export async function checkWatchingUpdates(forceRefresh = false): Promise<void> 
         day: '2-digit'
       }).split('/').reverse().join('-'); // 转换为 YYYY-MM-DD 格式
 
-      // 筛选有releaseDate且已上映的收藏
-      const newReleases = Object.entries(favorites)
-        .filter(([key, fav]) => {
+      // 筛选有releaseDate且已上映的提醒
+      const newReleases = Object.entries(reminders)
+        .filter(([key, reminder]) => {
           // 必须有上映日期
-          if (!fav.releaseDate) return false;
+          if (!reminder.releaseDate) return false;
 
           // 上映日期必须<=今天（已上映）
-          if (fav.releaseDate > today) return false;
+          if (reminder.releaseDate > today) return false;
 
           // 检查是否已经在播放记录中（避免重复）
           const isInPlayRecords = records.some(r =>
-            r.title === fav.title && r.year === fav.year
+            r.title === reminder.title && r.year === reminder.year
           );
 
           return !isInPlayRecords;
         })
-        .map(([key, fav]) => {
+        .map(([key, reminder]) => {
           const [sourceName, videoId] = key.split('+');
 
           // 重新计算 remarks，显示已上映多少天
           let remarksText = '已上映';
-          if (fav.releaseDate) {
-            const releaseDate = new Date(fav.releaseDate);
+          if (reminder.releaseDate) {
+            const releaseDate = new Date(reminder.releaseDate);
             const todayDate = new Date(today);
             const daysDiff = Math.floor((todayDate.getTime() - releaseDate.getTime()) / (1000 * 60 * 60 * 24));
 
@@ -258,32 +258,32 @@ export async function checkWatchingUpdates(forceRefresh = false): Promise<void> 
           }
 
           return {
-            title: fav.title,
-            source_name: fav.source_name,
-            year: fav.year,
-            cover: fav.cover,
+            title: reminder.title,
+            source_name: reminder.source_name,
+            year: reminder.year,
+            cover: reminder.cover,
             sourceKey: sourceName || 'unknown',
             videoId: videoId || 'unknown',
             currentEpisode: 0,
-            totalEpisodes: fav.total_episodes || 0,
+            totalEpisodes: reminder.total_episodes || 0,
             hasNewEpisode: false,
             hasContinueWatching: false,
             hasNewRelease: true, // 标记为新上映
             newEpisodes: 0,
             remainingEpisodes: 0,
-            latestEpisodes: fav.total_episodes || 0,
+            latestEpisodes: reminder.total_episodes || 0,
             remarks: remarksText,
-            releaseDate: fav.releaseDate,
+            releaseDate: reminder.releaseDate,
           };
         });
 
       if (newReleases.length > 0) {
-        console.log(`🎬 发现 ${newReleases.length} 部新上映的收藏内容`);
+        console.log(`🎬 发现 ${newReleases.length} 部新上映的提醒内容`);
         updatedSeries.push(...newReleases);
         newReleasesCount = newReleases.length;
         hasAnyUpdates = true;
       } else {
-        console.log('🎬 没有新上映的收藏内容');
+        console.log('🎬 没有新上映的提醒内容');
       }
     } catch (error) {
       console.error('检查新上映内容失败:', error);

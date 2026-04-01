@@ -16,9 +16,11 @@ import { ShortDramaItem, ReleaseCalendarItem } from '@/lib/types';
 import {
   getAllFavorites,
   getAllPlayRecords,
+  getAllReminders,
 } from '@/lib/db.client';
 // 🚀 TanStack Query Mutations
 import { useClearFavoritesMutation } from '@/hooks/useFavoritesMutations';
+import { useClearRemindersMutation } from '@/hooks/useRemindersMutations';
 import { useHomePageQueries } from '@/hooks/useHomePageQueries';
 import { getDoubanDetails } from '@/lib/douban.client';
 import { DoubanItem } from '@/lib/types';
@@ -39,7 +41,7 @@ import { ConfirmDialog } from '@/components/ConfirmDialog';
 
 // 🎯 优化：合并状态管理 - 使用 useReducer 减少重渲染
 interface HomeState {
-  activeTab: 'home' | 'favorites';
+  activeTab: 'home' | 'favorites' | 'reminders';
   hotMovies: DoubanItem[];
   hotTvShows: DoubanItem[];
   hotVarietyShows: DoubanItem[];
@@ -53,7 +55,7 @@ interface HomeState {
 }
 
 type HomeAction =
-  | { type: 'SET_ACTIVE_TAB'; payload: 'home' | 'favorites' }
+  | { type: 'SET_ACTIVE_TAB'; payload: 'home' | 'favorites' | 'reminders' }
   | { type: 'SET_HOT_MOVIES'; payload: DoubanItem[] }
   | { type: 'SET_HOT_TV_SHOWS'; payload: DoubanItem[] }
   | { type: 'SET_HOT_VARIETY_SHOWS'; payload: DoubanItem[] }
@@ -120,6 +122,13 @@ const allFavoritesOptions = () => queryOptions({
 const allPlayRecordsOptions = () => queryOptions({
   queryKey: ['playRecords'],
   queryFn: () => getAllPlayRecords(),
+  staleTime: 5 * 60 * 1000,
+  gcTime: 10 * 60 * 1000,
+});
+
+const allRemindersOptions = () => queryOptions({
+  queryKey: ['reminders'],
+  queryFn: () => getAllReminders(),
   staleTime: 5 * 60 * 1000,
   gcTime: 10 * 60 * 1000,
 });
@@ -291,6 +300,9 @@ function HomeClient() {
   // 🚀 TanStack Query - 使用 useQuery 获取播放记录（自动缓存，跨页面持久化）
   const { data: allPlayRecords = {} } = useQuery(allPlayRecordsOptions());
 
+  // 🚀 TanStack Query - 使用 useQuery 获取提醒数据（自动缓存，跨页面持久化）
+  const { data: allReminders = {} } = useQuery(allRemindersOptions());
+
   // 收藏夹数据
   type FavoriteItem = {
     id: string;
@@ -339,10 +351,39 @@ function HomeClient() {
       });
   }, [allFavorites, allPlayRecords]);
 
+  // 🚀 TanStack Query - 使用 useMemo 计算提醒列表（自动响应数据变化）
+  const reminderItems = useMemo(() => {
+    // 根据保存时间排序（从近到远）
+    return Object.entries(allReminders)
+      .sort(([, a], [, b]) => b.save_time - a.save_time)
+      .map(([key, reminder]) => {
+        const plusIndex = key.indexOf('+');
+        const source = key.slice(0, plusIndex);
+        const id = key.slice(plusIndex + 1);
+
+        return {
+          id,
+          source,
+          title: reminder.title,
+          year: reminder.year,
+          poster: reminder.cover,
+          episodes: reminder.total_episodes,
+          source_name: reminder.source_name,
+          search_title: reminder?.search_title,
+          origin: reminder?.origin,
+          type: reminder?.type,
+          releaseDate: reminder.releaseDate,
+          remarks: reminder?.remarks,
+        };
+      });
+  }, [allReminders]);
+
   const [favoriteFilter, setFavoriteFilter] = useState<'all' | 'movie' | 'tv' | 'anime' | 'shortdrama' | 'live' | 'variety'>('all');
   const [favoriteSortBy, setFavoriteSortBy] = useState<'recent' | 'title' | 'rating'>('recent');
   const [upcomingFilter, setUpcomingFilter] = useState<'all' | 'movie' | 'tv'>('all');
+  const [reminderFilter, setReminderFilter] = useState<'all' | 'upcoming' | 'today' | 'released'>('all');
   const [showClearFavoritesDialog, setShowClearFavoritesDialog] = useState(false);
+  const [showClearRemindersDialog, setShowClearRemindersDialog] = useState(false);
   const [requireClearConfirmation, setRequireClearConfirmation] = useState(false);
 
   // 🎯 优化：缓存收藏夹统计信息计算
@@ -631,6 +672,9 @@ function HomeClient() {
   // 特性：乐观更新（立即清空 UI）+ 错误回滚（失败时恢复数据）
   const clearFavoritesMutation = useClearFavoritesMutation();
 
+  // 🚀 TanStack Query - 使用 useMutation 管理清空提醒操作
+  const clearRemindersMutation = useClearRemindersMutation();
+
   const handleCloseAnnouncement = (announcement: string) => {
     dispatch({ type: 'SET_SHOW_ANNOUNCEMENT', payload: false });
     localStorage.setItem('hasSeenAnnouncement', announcement); // 记录已查看弹窗
@@ -681,14 +725,168 @@ function HomeClient() {
             options={[
               { label: '首页', value: 'home' },
               { label: '收藏夹', value: 'favorites' },
+              { label: '提醒', value: 'reminders' },
             ]}
             active={activeTab}
-            onChange={(value) => startTransition(() => dispatch({ type: 'SET_ACTIVE_TAB', payload: value as 'home' | 'favorites' }))}
+            onChange={(value) => startTransition(() => dispatch({ type: 'SET_ACTIVE_TAB', payload: value as 'home' | 'favorites' | 'reminders' }))}
           />
         </div>
 
         <div className={`w-full mx-auto ${isPending ? 'opacity-70 transition-opacity duration-150' : ''}`}>
-          {activeTab === 'favorites' ? (
+          {activeTab === 'reminders' ? (
+            // 提醒视图
+            <section className='mb-8'>
+              <div className='mb-6 flex items-center justify-between'>
+                <h2 className='text-xl font-bold text-gray-800 dark:text-gray-200'>
+                  我的提醒
+                </h2>
+                {reminderItems.length > 0 && (
+                  <button
+                    className='flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-red-600 hover:text-white hover:bg-red-600 dark:text-red-400 dark:hover:text-white dark:hover:bg-red-500 border border-red-300 dark:border-red-700 hover:border-red-600 dark:hover:border-red-500 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md'
+                    onClick={() => {
+                      if (requireClearConfirmation) {
+                        setShowClearRemindersDialog(true);
+                      } else {
+                        clearRemindersMutation.mutate();
+                      }
+                    }}
+                  >
+                    <Trash2 className='w-4 h-4' />
+                    <span>清空提醒</span>
+                  </button>
+                )}
+              </div>
+
+              {/* 筛选标签 */}
+              {reminderItems.length > 0 && (
+                <div className='mb-4 flex flex-wrap gap-2'>
+                  {[
+                    { key: 'all' as const, label: '全部', icon: '📚' },
+                    { key: 'upcoming' as const, label: '即将上映', icon: '⏰' },
+                    { key: 'today' as const, label: '今日上映', icon: '🎉' },
+                    { key: 'released' as const, label: '已上映', icon: '✅' },
+                  ].map(({ key, label, icon }) => (
+                    <button
+                      key={key}
+                      onClick={() => setReminderFilter(key)}
+                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                        reminderFilter === key
+                          ? 'bg-linear-to-r from-orange-500 to-red-500 text-white shadow-lg scale-105'
+                          : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                      }`}
+                    >
+                      <span className='mr-1'>{icon}</span>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              <div className='justify-start grid grid-cols-3 gap-x-2 gap-y-14 sm:gap-y-20 px-0 sm:px-2 sm:grid-cols-[repeat(auto-fill,_minmax(11rem,_1fr))] sm:gap-x-8'>
+                {(() => {
+                  // 筛选
+                  let filtered = reminderItems;
+                  if (reminderFilter === 'upcoming') {
+                    filtered = reminderItems.filter(item => {
+                      if (!item.releaseDate) return false;
+                      return item.releaseDate > today;
+                    });
+                  } else if (reminderFilter === 'today') {
+                    filtered = reminderItems.filter(item => {
+                      if (!item.releaseDate) return false;
+                      return item.releaseDate === today;
+                    });
+                  } else if (reminderFilter === 'released') {
+                    filtered = reminderItems.filter(item => {
+                      if (!item.releaseDate) return false;
+                      return item.releaseDate < today;
+                    });
+                  }
+
+                  return filtered.map((item) => {
+                    // 智能计算上映状态
+                    let calculatedRemarks = item.remarks;
+
+                    if (item.releaseDate) {
+                      const releaseDate = item.releaseDate;
+                      const releaseDateObj = new Date(releaseDate);
+                      const todayDateObj = new Date(today);
+                      const daysDiff = Math.ceil((releaseDateObj.getTime() - todayDateObj.getTime()) / (1000 * 60 * 60 * 24));
+
+                      if (daysDiff < 0) {
+                        const daysAgo = Math.abs(daysDiff);
+                        calculatedRemarks = `已上映${daysAgo}天`;
+                      } else if (daysDiff === 0) {
+                        calculatedRemarks = '今日上映';
+                      } else {
+                        calculatedRemarks = `${daysDiff}天后上映`;
+                      }
+                    }
+
+                    return (
+                      <div key={item.id + item.source} className='w-full'>
+                        <VideoCard
+                          query={item.search_title}
+                          {...item}
+                          from='reminder'
+                          remarks={calculatedRemarks}
+                          releaseDate={item.releaseDate}
+                        />
+                      </div>
+                    );
+                  });
+                })()}
+                {reminderItems.length === 0 && (
+                  <div className='col-span-full flex flex-col items-center justify-center py-16 px-4'>
+                    <div className='mb-6 relative'>
+                      <div className='absolute inset-0 bg-linear-to-r from-orange-300 to-red-300 dark:from-orange-600 dark:to-red-600 opacity-20 blur-3xl rounded-full animate-pulse'></div>
+                      <svg className='w-32 h-32 relative z-10' viewBox='0 0 200 200' fill='none' xmlns='http://www.w3.org/2000/svg'>
+                        <path d='M100 50 L100 120 M100 50 L130 80'
+                          className='stroke-gray-400 dark:stroke-gray-500'
+                          strokeWidth='8'
+                          strokeLinecap='round'
+                          strokeLinejoin='round'
+                        />
+                        <circle cx='100' cy='100' r='70'
+                          className='fill-gray-300 dark:fill-gray-600 stroke-gray-400 dark:stroke-gray-500'
+                          strokeWidth='3'
+                        />
+                        <path d='M100 50 L100 120 M100 50 L130 80'
+                          fill='none'
+                          stroke='currentColor'
+                          strokeWidth='2'
+                          strokeDasharray='5,5'
+                          className='text-gray-400 dark:text-gray-500'
+                        />
+                      </svg>
+                    </div>
+
+                    <h3 className='text-xl font-semibold text-gray-700 dark:text-gray-300 mb-2'>
+                      暂无提醒
+                    </h3>
+                    <p className='text-sm text-gray-500 dark:text-gray-400 text-center max-w-xs'>
+                      发现即将上映的内容，点击 🔔 设置提醒吧！
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* 确认对话框 */}
+              <ConfirmDialog
+                isOpen={showClearRemindersDialog}
+                title="确认清空提醒"
+                message={`确定要清空所有提醒吗？\n\n这将删除 ${reminderItems.length} 项提醒，此操作无法撤销。`}
+                confirmText="确认清空"
+                cancelText="取消"
+                variant="danger"
+                onConfirm={() => {
+                  clearRemindersMutation.mutate();
+                  setShowClearRemindersDialog(false);
+                }}
+                onCancel={() => setShowClearRemindersDialog(false)}
+              />
+            </section>
+          ) : activeTab === 'favorites' ? (
             // 收藏夹视图
             <section className='mb-8'>
               <div className='mb-6 flex items-center justify-between'>
