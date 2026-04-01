@@ -246,14 +246,18 @@ export async function checkWatchingUpdates(forceRefresh = false): Promise<void> 
           // 重新计算 remarks，显示已上映多少天
           let remarksText = '已上映';
           if (reminder.releaseDate) {
-            const releaseDate = new Date(reminder.releaseDate);
-            const todayDate = new Date(today);
-            const daysDiff = Math.floor((todayDate.getTime() - releaseDate.getTime()) / (1000 * 60 * 60 * 24));
+            const releaseDate = reminder.releaseDate; // "YYYY-MM-DD"
 
-            if (daysDiff === 0) {
+            if (releaseDate < today) {
+              // 已上映：计算天数差
+              const releaseParts = releaseDate.split('-').map(Number);
+              const todayParts = today.split('-').map(Number);
+              const releaseMs = new Date(releaseParts[0], releaseParts[1] - 1, releaseParts[2]).getTime();
+              const todayMs = new Date(todayParts[0], todayParts[1] - 1, todayParts[2]).getTime();
+              const daysAgo = Math.floor((todayMs - releaseMs) / (1000 * 60 * 60 * 24));
+              remarksText = `已上映${daysAgo}天`;
+            } else if (releaseDate === today) {
               remarksText = '今日上映';
-            } else if (daysDiff > 0) {
-              remarksText = `已上映${daysDiff}天`;
             }
           }
 
