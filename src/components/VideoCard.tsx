@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any,react-hooks/exhaustive-deps,@typescript-eslint/no-empty-function */
 
-import { ExternalLink, Heart, Link, PlayCircleIcon, Radio, Star, Trash2, Sparkles } from 'lucide-react';
+import { ExternalLink, Heart, Link, PlayCircleIcon, Radio, Star, Trash2, Sparkles, Bell, BellRing } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import React, {
@@ -619,14 +619,32 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
         // 搜索结果：根据加载状态显示不同的选项
         if (searchFavorited !== null) {
           // 已加载完成，显示实际的收藏状态
-          actions.push({
-            id: 'favorite',
-            label: currentFavorited ? '取消收藏' : '添加收藏',
-            icon: currentFavorited ? (
+          // 根据是否为即将上映显示不同的图标和文字
+          const isFavoritedState = currentFavorited;
+          const favoriteIcon = isUpcoming ? (
+            isFavoritedState ? (
+              <BellRing size={20} className="fill-orange-600 stroke-orange-600" />
+            ) : (
+              <Bell size={20} className="fill-transparent stroke-orange-500" />
+            )
+          ) : (
+            isFavoritedState ? (
               <Heart size={20} className="fill-red-600 stroke-red-600" />
             ) : (
               <Heart size={20} className="fill-transparent stroke-red-500" />
-            ),
+            )
+          );
+
+          const favoriteLabel = isUpcoming ? (
+            isFavoritedState ? '取消提醒' : '提醒我'
+          ) : (
+            isFavoritedState ? '取消收藏' : '添加收藏'
+          );
+
+          actions.push({
+            id: 'favorite',
+            label: favoriteLabel,
+            icon: favoriteIcon,
             onClick: () => {
               const mockEvent = {
                 preventDefault: () => { },
@@ -634,28 +652,49 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
               } as React.MouseEvent;
               handleToggleFavorite(mockEvent);
             },
-            color: currentFavorited ? ('danger' as const) : ('default' as const),
+            color: isFavoritedState ? ('danger' as const) : ('default' as const),
           });
         } else {
           // 正在加载中，显示占位项
+          const loadingIcon = isUpcoming ? <Bell size={20} /> : <Heart size={20} />;
+          const loadingLabel = isUpcoming ? '提醒加载中...' : '收藏加载中...';
+
           actions.push({
             id: 'favorite-loading',
-            label: '收藏加载中...',
-            icon: <Heart size={20} />,
+            label: loadingLabel,
+            icon: loadingIcon,
             onClick: () => { }, // 加载中时不响应点击
             disabled: true,
           });
         }
       } else {
         // 非搜索结果：直接显示收藏选项
-        actions.push({
-          id: 'favorite',
-          label: currentFavorited ? '取消收藏' : '添加收藏',
-          icon: currentFavorited ? (
+        // 根据是否为即将上映显示不同的图标和文字
+        const isFavoritedState = currentFavorited;
+        const favoriteIcon = isUpcoming ? (
+          isFavoritedState ? (
+            <BellRing size={20} className="fill-orange-600 stroke-orange-600" />
+          ) : (
+            <Bell size={20} className="fill-transparent stroke-orange-500" />
+          )
+        ) : (
+          isFavoritedState ? (
             <Heart size={20} className="fill-red-600 stroke-red-600" />
           ) : (
             <Heart size={20} className="fill-transparent stroke-red-500" />
-          ),
+          )
+        );
+
+        const favoriteLabel = isUpcoming ? (
+          isFavoritedState ? '取消提醒' : '提醒我'
+        ) : (
+          isFavoritedState ? '取消收藏' : '添加收藏'
+        );
+
+        actions.push({
+          id: 'favorite',
+          label: favoriteLabel,
+          icon: favoriteIcon,
           onClick: () => {
             const mockEvent = {
               preventDefault: () => { },
@@ -663,7 +702,7 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
             } as React.MouseEvent;
             handleToggleFavorite(mockEvent);
           },
-          color: currentFavorited ? ('danger' as const) : ('default' as const),
+          color: isFavoritedState ? ('danger' as const) : ('default' as const),
         });
       }
     }
@@ -945,28 +984,66 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
                 />
               )}
               {config.showHeart && (
-                <Heart
-                  onClick={handleToggleFavorite}
-                  size={20}
-                  className={`transition-all duration-300 ease-out ${(from === 'search' ? optimisticSearchFavorited : optimisticFavorited)
-                    ? 'fill-red-600 stroke-red-600'
-                    : 'fill-transparent stroke-white hover:stroke-red-400'
-                    } hover:scale-[1.1]`}
-                  style={{
-                    WebkitUserSelect: 'none',
-                    userSelect: 'none',
-                    WebkitTouchCallout: 'none',
-                  } as React.CSSProperties}
-                  onContextMenu={(e) => {
-                    e.preventDefault();
-                    return false;
-                  }}
-                />
+                <>
+                  {isUpcoming ? (
+                    // 即将上映：显示铃铛图标
+                    (from === 'search' ? optimisticSearchFavorited : optimisticFavorited) ? (
+                      <BellRing
+                        onClick={handleToggleFavorite}
+                        size={20}
+                        className="fill-orange-600 stroke-orange-600 transition-all duration-300 ease-out hover:scale-[1.1]"
+                        style={{
+                          WebkitUserSelect: 'none',
+                          userSelect: 'none',
+                          WebkitTouchCallout: 'none',
+                        } as React.CSSProperties}
+                        onContextMenu={(e) => {
+                          e.preventDefault();
+                          return false;
+                        }}
+                      />
+                    ) : (
+                      <Bell
+                        onClick={handleToggleFavorite}
+                        size={20}
+                        className="fill-transparent stroke-white hover:stroke-orange-400 transition-all duration-300 ease-out hover:scale-[1.1]"
+                        style={{
+                          WebkitUserSelect: 'none',
+                          userSelect: 'none',
+                          WebkitTouchCallout: 'none',
+                        } as React.CSSProperties}
+                        onContextMenu={(e) => {
+                          e.preventDefault();
+                          return false;
+                        }}
+                      />
+                    )
+                  ) : (
+                    // 已上映：显示爱心图标
+                    <Heart
+                      onClick={handleToggleFavorite}
+                      size={20}
+                      className={`transition-all duration-300 ease-out ${(from === 'search' ? optimisticSearchFavorited : optimisticFavorited)
+                        ? 'fill-red-600 stroke-red-600'
+                        : 'fill-transparent stroke-white hover:stroke-red-400'
+                        } hover:scale-[1.1]`}
+                      style={{
+                        WebkitUserSelect: 'none',
+                        userSelect: 'none',
+                        WebkitTouchCallout: 'none',
+                      } as React.CSSProperties}
+                      onContextMenu={(e) => {
+                        e.preventDefault();
+                        return false;
+                      }}
+                    />
+                  )}
+                </>
               )}
             </div>
           )}
 
-          {/* 收藏页面专用：固定显示的爱心按钮 */}
+          {/* 收藏页面专用：固定显示的爱心/铃铛按钮 */}
           {from === 'favorite' && config.showHeart && (
             <div
               className='absolute bottom-2 right-2 z-30'
@@ -982,10 +1059,17 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
                 return false;
               }}
             >
-              <Heart
-                size={16}
-                className='fill-red-500 stroke-red-500 transition-all duration-300 hover:scale-110 hover:fill-red-600 hover:stroke-red-600'
-              />
+              {isUpcoming ? (
+                <BellRing
+                  size={16}
+                  className='fill-orange-500 stroke-orange-500 transition-all duration-300 hover:scale-110 hover:fill-orange-600 hover:stroke-orange-600'
+                />
+              ) : (
+                <Heart
+                  size={16}
+                  className='fill-red-500 stroke-red-500 transition-all duration-300 hover:scale-110 hover:fill-red-600 hover:stroke-red-600'
+                />
+              )}
             </div>
           )}
 
