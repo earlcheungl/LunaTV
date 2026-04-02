@@ -4040,10 +4040,16 @@ function PlayPageClient() {
       // 原因：ArtPlayer设置了FULLSCREEN_WEB_IN_BODY=true时，网页全屏会把播放器移到body下
       // 如果不先退出全屏就destroy，播放器容器位置会错乱，导致新播放器只有声音没有画面
       // 参考ArtPlayer源码：packages/artplayer/src/player/fullscreenWebMix.js
+      //
+      // ⚠️ 重要：只处理网页全屏（fullscreenWeb），不要影响真正的全屏（fullscreen）
+      // fullscreenWeb - 网页全屏（伪全屏），通过CSS实现，会移动DOM到body
+      // fullscreen - 真正的浏览器全屏API（F11或全屏按钮），不会移动DOM
       const wasFullscreenWeb = artPlayerRef.current.fullscreenWeb;
+      const wasRealFullscreen = artPlayerRef.current.fullscreen;
 
-      if (wasFullscreenWeb) {
-        console.log('[Play] 检测到网页全屏状态，先退出网页全屏（稍后恢复）');
+      // 只在网页全屏模式下才需要退出并恢复，真正的全屏不需要处理
+      if (wasFullscreenWeb && !wasRealFullscreen) {
+        console.log('[Play] 检测到网页全屏状态（非真正全屏），先退出网页全屏（稍后恢复）');
         artPlayerRef.current.fullscreenWeb = false;
         // 等待DOM恢复到原容器位置（fullscreenWeb setter会调用append($container, $player)）
         await new Promise(resolve => setTimeout(resolve, 100));
@@ -4051,8 +4057,8 @@ function PlayPageClient() {
 
       await cleanupPlayer();
 
-      // 🔥 标记需要恢复网页全屏状态
-      if (wasFullscreenWeb) {
+      // 🔥 标记需要恢复网页全屏状态（只在网页全屏模式下）
+      if (wasFullscreenWeb && !wasRealFullscreen) {
         (window as any).__shouldRestoreFullscreenWeb = true;
       }
     }
