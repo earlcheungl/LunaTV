@@ -1915,7 +1915,8 @@ function PlayPageClient() {
 
       console.log('🎵 当前选中音轨:', selectedTrackIndex);
 
-      // 应用用户偏好
+      // 应用用户偏好 - 仅更新状态，不触发URL变更
+      // URL变更由换集逻辑或用户手动切换音轨时处理
       const preferredLang = loadPreferredAudioLang();
       if (!preferredLang) return;
 
@@ -1923,23 +1924,12 @@ function PlayPageClient() {
         t => normalizeAudioLang(t.language) === preferredLang
       );
 
-      if (!preferredTrack || preferredTrack.index === selectedTrackIndex) {
-        return;
-      }
-
-      // ✅ 关键修复：如果正在换集，不要调用setVideoUrl，避免触发initPlayer
-      // 换集逻辑会自己处理URL更新
-      if (isEpisodeChangingRef.current) {
-        console.log('🎵 检测到换集中，仅更新音轨选择，不触发URL变更');
+      if (preferredTrack && preferredTrack.index !== selectedTrackIndex) {
+        console.log('🎵 找到偏好音轨，更新选择状态:', preferredTrack.name);
         setCurrentAudioTrack(preferredTrack.index);
-        return;
-      }
-
-      const targetUrl = appendAudioStreamIndex(activeUrl, preferredTrack.index);
-      setCurrentAudioTrack(preferredTrack.index);
-      if (targetUrl && targetUrl !== activeUrl) {
-        console.log('🎵 应用偏好音轨，切换URL:', targetUrl);
-        setVideoUrl(targetUrl);
+        // 注意：不调用setVideoUrl()，避免触发initPlayer
+        // 换集时，updateVideoUrl会处理音轨参数
+        // 用户手动切换音轨时，handleAudioTrackSelect会处理
       }
     };
 
@@ -2154,7 +2144,14 @@ function PlayPageClient() {
       }
     } else {
       // 普通视频格式
-      const newUrl = episodeData || '';
+      let newUrl = episodeData || '';
+
+      // ✅ 关键修复：对于Emby源，如果有偏好音轨，添加AudioStreamIndex参数
+      const isEmbySource = detailData.source === 'emby' || detailData.source?.startsWith('emby_');
+      if (isEmbySource && newUrl && currentAudioTrackRef.current >= 0) {
+        newUrl = appendAudioStreamIndex(newUrl, currentAudioTrackRef.current);
+        console.log('🎵 换集时应用音轨参数:', currentAudioTrackRef.current);
+      }
 
       if (newUrl !== videoUrl) {
         setVideoUrl(newUrl);
