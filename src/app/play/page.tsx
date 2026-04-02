@@ -4205,10 +4205,13 @@ function PlayPageClient() {
         isEpisodeChangingRef.current = false;
 
         // 🔥 记录网页全屏状态，重建后恢复
+        // ⚠️ 重要：只处理网页全屏（fullscreenWeb），不要影响真正的全屏（fullscreen）
         const wasFullscreenWeb = artPlayerRef.current?.fullscreenWeb || false;
+        const wasRealFullscreen = artPlayerRef.current?.fullscreen || false;
 
         // 如果switch失败，清理播放器并重新创建
-        if (wasFullscreenWeb && artPlayerRef.current) {
+        // 只在网页全屏模式下才需要退出并恢复，真正的全屏不需要处理
+        if (wasFullscreenWeb && !wasRealFullscreen && artPlayerRef.current) {
           console.log('[Play] Switch失败，退出网页全屏后重建（稍后恢复）');
           artPlayerRef.current.fullscreenWeb = false;
           await new Promise(resolve => setTimeout(resolve, 100));
@@ -4216,8 +4219,8 @@ function PlayPageClient() {
 
         await cleanupPlayer();
 
-        // 标记需要恢复网页全屏
-        if (wasFullscreenWeb) {
+        // 标记需要恢复网页全屏（只在网页全屏模式下）
+        if (wasFullscreenWeb && !wasRealFullscreen) {
           (window as any).__shouldRestoreFullscreenWeb = true;
         }
       }
