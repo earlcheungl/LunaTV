@@ -2271,41 +2271,6 @@ function PlayPageClient() {
 
   // 清理播放器资源的统一函数
   const cleanupPlayer = async () => {
-    // 🔥 关键修复：先同步清理 HLS 和 video，确保音频立即停止
-    if (artPlayerRef.current) {
-      try {
-        const video = artPlayerRef.current.video;
-
-        // 1. 立即暂停视频
-        if (video) {
-          video.pause();
-          console.log('[Cleanup] 视频已暂停');
-        }
-
-        // 2. 停止 HLS 加载
-        if (video?.hls) {
-          try {
-            video.hls.stopLoad();
-            video.hls.detachMedia();
-            video.hls.destroy();
-            console.log('[Cleanup] HLS已清理');
-          } catch (err) {
-            console.warn('[Cleanup] HLS清理出错:', err);
-          }
-        }
-
-        // 3. 清空 video src
-        if (video) {
-          video.removeAttribute('src');
-          video.load();
-          video.src = '';
-          console.log('[Cleanup] video src已清空');
-        }
-      } catch (err) {
-        console.warn('[Cleanup] 同步清理出错:', err);
-      }
-    }
-
     // 先清理WebSR，避免GPU纹理错误
     await destroyWebSR();
 
@@ -2320,33 +2285,57 @@ function PlayPageClient() {
 
     if (artPlayerRef.current) {
       try {
-        // 清理弹幕插件的WebWorker
+        // 🔥 关键：先保存 video 和 hls 引用
+        const video = artPlayerRef.current.video;
+        const hls = video?.hls;
+
+        // 清理弹幕插件
         if (artPlayerRef.current.plugins?.artplayerPluginDanmuku) {
           const danmukuPlugin = artPlayerRef.current.plugins.artplayerPluginDanmuku;
-
-          // 尝试获取并清理WebWorker
           if (danmukuPlugin.worker && typeof danmukuPlugin.worker.terminate === 'function') {
             danmukuPlugin.worker.terminate();
             console.log('[Cleanup] 弹幕WebWorker已清理');
           }
-
-          // 清空弹幕数据
           if (typeof danmukuPlugin.reset === 'function') {
             danmukuPlugin.reset();
           }
         }
 
-        // 销毁ArtPlayer实例 (使用false参数避免DOM清理冲突)
+        // 1. 先销毁 ArtPlayer，停止所有控制
         artPlayerRef.current.destroy(false);
         artPlayerRef.current = null;
-        setPlayerReady(false); // 重置播放器就绪状态
+        setPlayerReady(false);
+        console.log('[Cleanup] ArtPlayer已销毁');
+
+        // 2. 然后清理 video 和 HLS
+        if (video) {
+          video.pause();
+          console.log('[Cleanup] 视频已暂停');
+        }
+
+        if (hls) {
+          try {
+            hls.stopLoad();
+            hls.detachMedia();
+            hls.destroy();
+            console.log('[Cleanup] HLS已清理');
+          } catch (err) {
+            console.warn('[Cleanup] HLS清理出错:', err);
+          }
+        }
+
+        if (video) {
+          video.removeAttribute('src');
+          video.load();
+          video.src = '';
+          console.log('[Cleanup] video src已清空');
+        }
 
         console.log('播放器资源已清理');
       } catch (err) {
         console.warn('清理播放器资源时出错:', err);
-        // 即使出错也要确保引用被清空
         artPlayerRef.current = null;
-        setPlayerReady(false); // 重置播放器就绪状态
+        setPlayerReady(false);
       }
     }
   };
