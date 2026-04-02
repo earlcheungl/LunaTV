@@ -997,7 +997,7 @@ export const UserMenu: React.FC = () => {
                   <div className='flex items-center gap-1'>
                     <div className='w-2 h-2 bg-green-500 rounded-full animate-pulse'></div>
                     <span className='text-sm text-green-500 font-medium'>
-                      {watchingUpdates.updatedSeries.filter(series => series.hasNewRelease && !dismissedReleases.has(`${series.sourceKey}+${series.videoId}`)).length}部收藏已上映
+                      {watchingUpdates.updatedSeries.filter(series => series.hasNewRelease && !dismissedReleases.has(`${series.sourceKey}+${series.videoId}`)).length}部新上映
                     </span>
                   </div>
                 </div>
