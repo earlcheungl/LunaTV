@@ -4147,6 +4147,12 @@ function PlayPageClient() {
         const isEpisodeChange = isEpisodeChangingRef.current;
         const currentTime = artPlayerRef.current.currentTime || 0;
 
+        // 🔥 保存全屏状态（真正的全屏和网页全屏）
+        // switchUrl会改变video元素的src，可能导致浏览器退出全屏
+        const wasRealFullscreen = artPlayerRef.current.fullscreen;
+        const wasFullscreenWeb = artPlayerRef.current.fullscreenWeb;
+        console.log(`📺 切换前全屏状态: fullscreen=${wasRealFullscreen}, fullscreenWeb=${wasFullscreenWeb}`);
+
         let switchPromise: Promise<any>;
         if (isEpisodeChange) {
           console.log(`🎯 开始切换集数: ${videoUrl} (重置播放时间到0)`);
@@ -4165,6 +4171,16 @@ function PlayPageClient() {
             artPlayerRef.current.title = `${videoTitle} - 第${currentEpisodeIndex + 1}集`;
             artPlayerRef.current.poster = videoCover;
             console.log('✅ 源切换完成');
+
+            // 🔥 恢复全屏状态
+            // 注意：真正的全屏优先级高于网页全屏
+            if (wasRealFullscreen) {
+              console.log('📺 恢复真正的全屏模式');
+              artPlayerRef.current.fullscreen = true;
+            } else if (wasFullscreenWeb) {
+              console.log('📺 恢复网页全屏模式');
+              artPlayerRef.current.fullscreenWeb = true;
+            }
 
             // 🔥 重置集数切换标识
             if (isEpisodeChange) {
