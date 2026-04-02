@@ -2285,23 +2285,28 @@ function PlayPageClient() {
 
     if (artPlayerRef.current) {
       try {
-        // 1. 🔥 正确销毁HLS实例 - 参考 https://github.com/video-dev/hls.js/issues/1741
-        // 必须先销毁HLS，再处理video元素
-        if (artPlayerRef.current.video?.hls) {
-          const hls = artPlayerRef.current.video.hls;
-          hls.stopLoad(); // 停止加载分片
-          hls.detachMedia(); // 分离video元素
-          hls.destroy(); // 销毁实例
-          console.log('[Cleanup] HLS实例已正确销毁');
-        }
+        const video = artPlayerRef.current.video;
 
-        // 2. 暂停video元素
-        if (artPlayerRef.current.video) {
-          artPlayerRef.current.video.pause();
+        // 1. 🔥 先暂停video - 参考 https://github.com/video-dev/hls.js/issues/273
+        if (video) {
+          video.pause();
           console.log('[Cleanup] 视频已暂停');
         }
 
-        // 3. 清理弹幕插件的WebWorker
+        // 2. 🔥 移除src属性并重置video状态
+        if (video) {
+          video.removeAttribute('src');
+          video.load(); // 重置video元素状态
+          console.log('[Cleanup] 视频src已清空并重置');
+        }
+
+        // 3. 🔥 销毁HLS实例
+        if (video?.hls) {
+          video.hls.destroy();
+          console.log('[Cleanup] HLS实例已销毁');
+        }
+
+        // 4. 清理弹幕插件的WebWorker
         if (artPlayerRef.current.plugins?.artplayerPluginDanmuku) {
           const danmukuPlugin = artPlayerRef.current.plugins.artplayerPluginDanmuku;
 
@@ -2317,7 +2322,7 @@ function PlayPageClient() {
           }
         }
 
-        // 4. 销毁ArtPlayer实例 (使用false参数避免DOM清理冲突)
+        // 5. 销毁ArtPlayer实例 (使用false参数避免DOM清理冲突)
         artPlayerRef.current.destroy(false);
         artPlayerRef.current = null;
         setPlayerReady(false); // 重置播放器就绪状态
