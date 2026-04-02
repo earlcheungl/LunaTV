@@ -1149,17 +1149,23 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
                 return false;
               }}
             >
-              {isUpcoming ? (
-                <BellRing
-                  size={16}
-                  className='fill-orange-500 stroke-orange-500 transition-all duration-300 hover:scale-110 hover:fill-orange-600 hover:stroke-orange-600'
-                />
-              ) : (
-                <Heart
-                  size={16}
-                  className='fill-red-500 stroke-red-500 transition-all duration-300 hover:scale-110 hover:fill-red-600 hover:stroke-red-600'
-                />
-              )}
+              {(() => {
+                // 🔥 修复：检查是否是"新上映"的内容
+                const isNewRelease = remarks && (remarks.includes('已上映') || remarks.includes('今日上映'));
+                const shouldShowBell = isUpcoming || isNewRelease;
+
+                return shouldShowBell ? (
+                  <BellRing
+                    size={16}
+                    className='fill-orange-500 stroke-orange-500 transition-all duration-300 hover:scale-110 hover:fill-orange-600 hover:stroke-orange-600'
+                  />
+                ) : (
+                  <Heart
+                    size={16}
+                    className='fill-red-500 stroke-red-500 transition-all duration-300 hover:scale-110 hover:fill-red-600 hover:stroke-red-600'
+                  />
+                );
+              })()}
             </div>
           )}
 

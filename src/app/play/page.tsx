@@ -2271,6 +2271,41 @@ function PlayPageClient() {
 
   // 清理播放器资源的统一函数
   const cleanupPlayer = async () => {
+    // 🔥 关键修复：先同步清理 HLS 和 video，确保音频立即停止
+    if (artPlayerRef.current) {
+      try {
+        const video = artPlayerRef.current.video;
+
+        // 1. 立即暂停视频
+        if (video) {
+          video.pause();
+          console.log('[Cleanup] 视频已暂停');
+        }
+
+        // 2. 停止 HLS 加载
+        if (video?.hls) {
+          try {
+            video.hls.stopLoad();
+            video.hls.detachMedia();
+            video.hls.destroy();
+            console.log('[Cleanup] HLS已清理');
+          } catch (err) {
+            console.warn('[Cleanup] HLS清理出错:', err);
+          }
+        }
+
+        // 3. 清空 video src
+        if (video) {
+          video.removeAttribute('src');
+          video.load();
+          video.src = '';
+          console.log('[Cleanup] video src已清空');
+        }
+      } catch (err) {
+        console.warn('[Cleanup] 同步清理出错:', err);
+      }
+    }
+
     // 先清理WebSR，避免GPU纹理错误
     await destroyWebSR();
 
@@ -2285,28 +2320,7 @@ function PlayPageClient() {
 
     if (artPlayerRef.current) {
       try {
-        const video = artPlayerRef.current.video;
-
-        // 1. 🔥 先暂停video - 参考 https://github.com/video-dev/hls.js/issues/273
-        if (video) {
-          video.pause();
-          console.log('[Cleanup] 视频已暂停');
-        }
-
-        // 2. 🔥 移除src属性并重置video状态
-        if (video) {
-          video.removeAttribute('src');
-          video.load(); // 重置video元素状态
-          console.log('[Cleanup] 视频src已清空并重置');
-        }
-
-        // 3. 🔥 销毁HLS实例
-        if (video?.hls) {
-          video.hls.destroy();
-          console.log('[Cleanup] HLS实例已销毁');
-        }
-
-        // 4. 清理弹幕插件的WebWorker
+        // 清理弹幕插件的WebWorker
         if (artPlayerRef.current.plugins?.artplayerPluginDanmuku) {
           const danmukuPlugin = artPlayerRef.current.plugins.artplayerPluginDanmuku;
 
@@ -2322,7 +2336,7 @@ function PlayPageClient() {
           }
         }
 
-        // 5. 销毁ArtPlayer实例 (使用false参数避免DOM清理冲突)
+        // 销毁ArtPlayer实例 (使用false参数避免DOM清理冲突)
         artPlayerRef.current.destroy(false);
         artPlayerRef.current = null;
         setPlayerReady(false); // 重置播放器就绪状态
