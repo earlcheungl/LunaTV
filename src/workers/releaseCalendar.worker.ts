@@ -53,7 +53,7 @@ function processReleaseCalendar(input: WorkerInput): WorkerOutput {
 
   // 过滤出即将上映和刚上映的作品（过去7天到未来90天）
   // 手动解析日期以避免时区问题
-  const todayParts = today.split('-').map(Number);
+  const todayParts = today.split('-').map(Number); // [YYYY, MM, DD]
   const todayDate = new Date(todayParts[0], todayParts[1] - 1, todayParts[2]);
   todayDate.setHours(0, 0, 0, 0);
 
@@ -65,6 +65,9 @@ function processReleaseCalendar(input: WorkerInput): WorkerOutput {
   // 手动格式化日期为 YYYY-MM-DD
   const sevenDaysAgoStr = `${sevenDaysAgo.getFullYear()}-${String(sevenDaysAgo.getMonth() + 1).padStart(2, '0')}-${String(sevenDaysAgo.getDate()).padStart(2, '0')}`;
   const ninetyDaysStr = `${ninetyDaysLater.getFullYear()}-${String(ninetyDaysLater.getMonth() + 1).padStart(2, '0')}-${String(ninetyDaysLater.getDate()).padStart(2, '0')}`;
+
+  console.log('📅 [Worker] 日期范围:', { today, sevenDaysAgoStr, ninetyDaysStr });
+  console.log('📅 [Worker] 前3条数据示例:', releases.slice(0, 3).map(r => ({ title: r.title, releaseDate: r.releaseDate })));
 
   const upcoming = releases.filter((item: ReleaseCalendarItem) => {
     const releaseDateStr = item.releaseDate;
