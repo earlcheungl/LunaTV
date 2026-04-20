@@ -6433,14 +6433,10 @@ function PlayPageClient() {
                   localStorage.setItem('seek_layout', newSettings.mobileLayout);
                 }
 
-                // 重新加载播放器以应用新设置
-                if (artPlayerRef.current) {
-                  resumeTimeRef.current = artPlayerRef.current.currentTime;
-                  if (artPlayerRef.current.video.hls) {
-                    artPlayerRef.current.video.hls.destroy();
-                  }
-                  artPlayerRef.current.destroy(false);
-                  artPlayerRef.current = null;
+                // 实时更新插件（像弹幕一样）
+                if (artPlayerRef.current?.plugins?.artplayerPluginSeekButtons) {
+                  artPlayerRef.current.plugins.artplayerPluginSeekButtons.config(newSettings);
+                  artPlayerRef.current.notice.show = '设置已更新';
                 }
               }}
             />
