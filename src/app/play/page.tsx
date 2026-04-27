@@ -4665,8 +4665,8 @@ function PlayPageClient() {
             },
           },
           {
-            name: '控制栏透明度',
-            html: '控制栏透明度',
+            name: '控制栏遮挡度',
+            html: '控制栏遮挡度',
             icon: '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><path d="M3 9h18M9 21V9"></path></svg>',
             tooltip: (() => {
               const opacity = parseFloat(localStorage.getItem('control_bar_opacity') || '0.5');
