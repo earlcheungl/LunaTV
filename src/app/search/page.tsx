@@ -1143,35 +1143,66 @@ function SearchPageClient() {
     setBilibiliPopularLoading(true);
 
     try {
-      const page = loadMore ? bilibiliPopularPage + 1 : 1;
-      console.log(`🔥 Bilibili热门: loadMore=${loadMore}, currentPage=${bilibiliPopularPage}, requestPage=${page}`);
-      const response = await fetch(`/api/bilibili/popular?pn=${page}&ps=20`);
-      const data = await response.json();
-      console.log(`📦 Bilibili API返回:`, {
-        success: data.success,
-        videosCount: data.videos?.length,
-        no_more: data.no_more,
-        fromCache: data.fromCache,
-        firstVideoTitle: data.videos?.[0]?.title?.substring(0, 30)
-      });
+      if (loadMore) {
+        // 加载更多：持续请求多页直到收集到至少10个新视频
+        const existingBvids = new Set((bilibiliPopular || []).map((v: any) => v.bvid));
+        const newVideos: any[] = [];
+        let currentPage = bilibiliPopularPage;
+        const targetNewVideos = 10; // 目标：每次至少加载10个新视频
+        const maxAttempts = 5; // 最多尝试5页，避免无限循环
 
-      if (response.ok && data.success) {
-        if (loadMore) {
-          // 合并时去重（根据bvid）
-          const existingBvids = new Set((bilibiliPopular || []).map((v: any) => v.bvid));
-          const newVideos = (data.videos || []).filter((v: any) => !existingBvids.has(v.bvid));
-          setBilibiliPopular(prev => [...(prev || []), ...newVideos]);
-          console.log(`✅ 去重后新增 ${newVideos.length} 个视频（原始 ${data.videos?.length} 个）`);
-        } else {
-          setBilibiliPopular(data.videos || []);
+        console.log(`🔥 Bilibili热门加载更多: 当前页=${currentPage}, 目标新视频数=${targetNewVideos}`);
+
+        for (let attempt = 0; attempt < maxAttempts; attempt++) {
+          currentPage++;
+          console.log(`📡 请求第 ${currentPage} 页...`);
+
+          const response = await fetch(`/api/bilibili/popular?pn=${currentPage}&ps=20`);
+          const data = await response.json();
+
+          if (!response.ok || !data.success) {
+            console.error(`❌ 第 ${currentPage} 页请求失败:`, data.error);
+            break;
+          }
+
+          // 过滤出新视频
+          const pageNewVideos = (data.videos || []).filter((v: any) => {
+            if (existingBvids.has(v.bvid)) return false;
+            existingBvids.add(v.bvid); // 添加到已存在集合，避免本次请求内部重复
+            return true;
+          });
+
+          newVideos.push(...pageNewVideos);
+          console.log(`📦 第 ${currentPage} 页: 原始 ${data.videos?.length} 个，新增 ${pageNewVideos.length} 个，累计 ${newVideos.length} 个`);
+
+          // 如果收集够了或者没有更多了，停止
+          if (newVideos.length >= targetNewVideos || data.no_more) {
+            setBilibiliPopularPage(currentPage);
+            setBilibiliPopularHasMore(!data.no_more);
+            break;
+          }
         }
 
-        setBilibiliPopularPage(page);
-        setBilibiliPopularHasMore(!data.no_more);
-        console.log(`✅ Bilibili热门加载成功: page=${page}, videos=${data.videos?.length}, no_more=${data.no_more}`);
+        if (newVideos.length > 0) {
+          setBilibiliPopular(prev => [...(prev || []), ...newVideos]);
+          console.log(`✅ 加载更多完成: 新增 ${newVideos.length} 个视频`);
+        } else {
+          console.log(`⚠️ 没有找到新视频`);
+          setBilibiliPopularHasMore(false);
+        }
       } else {
-        console.error('获取热门视频失败:', data.error);
-        if (!loadMore) {
+        // 首次加载
+        console.log(`🔥 Bilibili热门首次加载`);
+        const response = await fetch(`/api/bilibili/popular?pn=1&ps=20`);
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+          setBilibiliPopular(data.videos || []);
+          setBilibiliPopularPage(1);
+          setBilibiliPopularHasMore(!data.no_more);
+          console.log(`✅ Bilibili热门加载成功: ${data.videos?.length} 个视频`);
+        } else {
+          console.error('获取热门视频失败:', data.error);
           setBilibiliPopular([]);
         }
       }
