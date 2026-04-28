@@ -1300,7 +1300,6 @@ function SearchPageClient() {
                   type='button'
                   onClick={() => {
                     setSearchType('bilibili');
-                    setShowResults(true); // 显示结果区域
                     // 清除之前的搜索状态
                     setBilibiliError(null);
                     setBilibiliResults(null);
@@ -1313,9 +1312,9 @@ function SearchPageClient() {
                     setTmdbActorError(null);
                     // 如果当前有搜索词，立即触发Bilibili搜索
                     const currentQuery = searchQuery.trim() || searchParams?.get('q');
-                    if (currentQuery) {
+                    if (currentQuery && showResults) {
                       setTimeout(() => handleBilibiliSearch(currentQuery), 0);
-                    } else if (!bilibiliPopular) {
+                    } else if (!currentQuery && !bilibiliPopular) {
                       // 如果没有搜索词且还没加载热门推荐，立即加载
                       setTimeout(() => handleBilibiliPopular(), 0);
                     }
