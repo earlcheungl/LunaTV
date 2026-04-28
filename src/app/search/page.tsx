@@ -896,21 +896,21 @@ function SearchPageClient() {
     if ((searchType === 'netdisk' || searchType === 'youtube' || searchType === 'bilibili' || searchType === 'tmdb-actor') && showResults) {
       const currentQuery = searchQuery.trim() || searchParams.get('q');
       if (currentQuery) {
-        if (searchType === 'netdisk' && netdiskResourceType === 'netdisk' && !netdiskLoading) {
+        if (searchType === 'netdisk' && netdiskResourceType === 'netdisk') {
           handleNetDiskSearch(currentQuery);
         } else if (searchType === 'netdisk' && netdiskResourceType === 'acg') {
           // ACG 搜索：触发 AcgSearch 组件搜索
           setAcgTriggerSearch(prev => !prev);
-        } else if (searchType === 'youtube' && !youtubeLoading) {
+        } else if (searchType === 'youtube') {
           handleYouTubeSearch(currentQuery);
-        } else if (searchType === 'bilibili' && !bilibiliLoading) {
+        } else if (searchType === 'bilibili') {
           handleBilibiliSearch(currentQuery);
-        } else if (searchType === 'tmdb-actor' && !tmdbActorLoading) {
+        } else if (searchType === 'tmdb-actor') {
           handleTmdbActorSearch(currentQuery, tmdbActorType, tmdbFilterState);
         }
       }
     }
-  }, [searchType, netdiskResourceType, showResults, searchQuery, searchParams, netdiskLoading, youtubeLoading, bilibiliLoading, tmdbActorLoading]);
+  }, [searchType, netdiskResourceType, showResults, searchQuery, searchParams]);
 
   useEffect(() => {
     // 当搜索参数变化时更新 UI 状态（数据获取由 TanStack Query 驱动）
