@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
   }
 
   const { searchParams } = new URL(request.url);
-  const keyword = searchParams.get('keyword');
+  const keyword = searchParams.get('q') || searchParams.get('keyword');
 
   if (!keyword) {
     return NextResponse.json({ error: '搜索关键词不能为空' }, { status: 400 });
