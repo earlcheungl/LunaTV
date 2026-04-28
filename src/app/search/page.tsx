@@ -378,8 +378,6 @@ function SearchPageClient() {
   const [bilibiliResults, setBilibiliResults] = useState<any[] | null>(null);
   const [bilibiliPopular, setBilibiliPopular] = useState<any[] | null>(null); // 热门推荐
   const [bilibiliPopularLoading, setBilibiliPopularLoading] = useState(false);
-  const [bilibiliPopularPage, setBilibiliPopularPage] = useState(1); // Bilibili分页页码
-  const [bilibiliPopularHasMore, setBilibiliPopularHasMore] = useState(true); // 是否还有更多
   const [bilibiliLoading, setBilibiliLoading] = useState(false);
   const [bilibiliError, setBilibiliError] = useState<string | null>(null);
   const [bilibiliTab, setBilibiliTab] = useState<'video' | 'bangumi' | 'upuser'>('video'); // 视频、番剧或UP主
@@ -1139,91 +1137,24 @@ function SearchPageClient() {
   };
 
   // Bilibili热门推荐函数
-  const handleBilibiliPopular = async (loadMore = false) => {
+  const handleBilibiliPopular = async () => {
     setBilibiliPopularLoading(true);
 
     try {
-      if (loadMore) {
-        // 加载更多：持续请求多页直到收集到至少5个新视频
-        const existingBvids = new Set((bilibiliPopular || []).map((v: any) => v.bvid));
-        const newVideos: any[] = [];
-        let currentPage = bilibiliPopularPage;
-        const targetNewVideos = 5; // 目标：每次至少加载5个新视频
-        const maxAttempts = 10; // 最多尝试10页
-        let lastNoMore = false;
+      console.log(`🔥 Bilibili热门首次加载`);
+      const response = await fetch(`/api/bilibili/popular?pn=1&ps=50`);
+      const data = await response.json();
 
-        console.log(`🔥 Bilibili热门加载更多: 当前页=${currentPage}, 目标新视频数=${targetNewVideos}`);
-
-        for (let attempt = 0; attempt < maxAttempts; attempt++) {
-          currentPage++;
-          console.log(`📡 请求第 ${currentPage} 页...`);
-
-          const response = await fetch(`/api/bilibili/popular?pn=${currentPage}&ps=20`);
-          const data = await response.json();
-
-          if (!response.ok || !data.success) {
-            console.error(`❌ 第 ${currentPage} 页请求失败:`, data.error);
-            break;
-          }
-
-          // 过滤出新视频
-          const pageNewVideos = (data.videos || []).filter((v: any) => {
-            if (existingBvids.has(v.bvid)) return false;
-            existingBvids.add(v.bvid); // 添加到已存在集合，避免本次请求内部重复
-            return true;
-          });
-
-          newVideos.push(...pageNewVideos);
-          console.log(`📦 第 ${currentPage} 页: 原始 ${data.videos?.length} 个，新增 ${pageNewVideos.length} 个，累计 ${newVideos.length} 个`);
-
-          lastNoMore = data.no_more;
-
-          // 如果API说没有更多了，停止
-          if (data.no_more) {
-            console.log(`⚠️ API返回no_more，停止请求`);
-            break;
-          }
-
-          // 如果收集够了，停止
-          if (newVideos.length >= targetNewVideos) {
-            console.log(`✅ 已收集到 ${newVideos.length} 个新视频，达到目标`);
-            break;
-          }
-        }
-
-        // 更新页码
-        setBilibiliPopularPage(currentPage);
-
-        // 只有在API明确返回no_more时才隐藏按钮
-        setBilibiliPopularHasMore(!lastNoMore);
-
-        if (newVideos.length > 0) {
-          setBilibiliPopular(prev => [...(prev || []), ...newVideos]);
-          console.log(`✅ 加载更多完成: 新增 ${newVideos.length} 个视频，hasMore=${!lastNoMore}`);
-        } else {
-          console.log(`⚠️ 没有找到新视频，但hasMore=${!lastNoMore}`);
-        }
+      if (response.ok && data.success) {
+        setBilibiliPopular(data.videos || []);
+        console.log(`✅ Bilibili热门加载成功: ${data.videos?.length} 个视频`);
       } else {
-        // 首次加载
-        console.log(`🔥 Bilibili热门首次加载`);
-        const response = await fetch(`/api/bilibili/popular?pn=1&ps=20`);
-        const data = await response.json();
-
-        if (response.ok && data.success) {
-          setBilibiliPopular(data.videos || []);
-          setBilibiliPopularPage(1);
-          setBilibiliPopularHasMore(!data.no_more);
-          console.log(`✅ Bilibili热门加载成功: ${data.videos?.length} 个视频`);
-        } else {
-          console.error('获取热门视频失败:', data.error);
-          setBilibiliPopular([]);
-        }
+        console.error('获取热门视频失败:', data.error);
+        setBilibiliPopular([]);
       }
     } catch (error: any) {
       console.error('热门视频请求失败:', error);
-      if (!loadMore) {
-        setBilibiliPopular([]);
-      }
+      setBilibiliPopular([]);
     } finally {
       setBilibiliPopularLoading(false);
     }
@@ -2227,39 +2158,6 @@ function SearchPageClient() {
                             <BilibiliVideoCard key={`popular-${video.bvid}-${index}`} video={video} />
                           ))}
                         </div>
-
-                        {/* 加载更多按钮 */}
-                        {bilibiliPopularHasMore && (
-                          <div className='mt-6 text-center'>
-                            <button
-                              onClick={() => handleBilibiliPopular(true)}
-                              disabled={bilibiliPopularLoading}
-                              className='relative px-8 py-4 rounded-2xl bg-gradient-to-r from-pink-50 via-rose-50 to-fuchsia-50 dark:from-pink-900/20 dark:via-rose-900/20 dark:to-fuchsia-900/20 border border-pink-200/50 dark:border-pink-700/50 shadow-lg backdrop-blur-sm overflow-hidden hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed'
-                            >
-                              {bilibiliPopularLoading ? (
-                                <>
-                                  <div className='absolute inset-0 bg-gradient-to-r from-pink-400/10 via-rose-400/10 to-fuchsia-400/10 animate-pulse'></div>
-                                  <div className='relative flex items-center gap-3 justify-center'>
-                                    <div className='relative'>
-                                      <div className='animate-spin rounded-full h-6 w-6 border-[3px] border-pink-200 dark:border-pink-800'></div>
-                                      <div className='absolute inset-0 animate-spin rounded-full h-6 w-6 border-[3px] border-transparent border-t-pink-500 dark:border-t-pink-400'></div>
-                                    </div>
-                                    <div className='flex items-center gap-1'>
-                                      <span className='text-sm font-medium text-gray-700 dark:text-gray-300'>加载中</span>
-                                      <span className='flex gap-0.5'>
-                                        <span className='animate-bounce' style={{ animationDelay: '0ms' }}>.</span>
-                                        <span className='animate-bounce' style={{ animationDelay: '150ms' }}>.</span>
-                                        <span className='animate-bounce' style={{ animationDelay: '300ms' }}>.</span>
-                                      </span>
-                                    </div>
-                                  </div>
-                                </>
-                              ) : (
-                                <span className='text-sm font-medium text-gray-700 dark:text-gray-300'>👆 点我加载更多</span>
-                              )}
-                            </button>
-                          </div>
-                        )}
                       </>
                     ) : !bilibiliPopularLoading ? (
                       <div className='text-center text-gray-500 py-8 dark:text-gray-400'>
