@@ -4,6 +4,7 @@
 import { ChevronUp, Grid2x2, List, Play, Search, X } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import React, { Suspense, useEffect, useMemo, useRef, useState } from 'react';
+import Select from 'react-select';
 import { useQuery, experimental_streamedQuery as streamedQuery } from '@tanstack/react-query';
 
 import {
@@ -1863,23 +1864,45 @@ function SearchPageClient() {
                         <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
                           选择地区：
                         </label>
-                        <select
-                          value={youtubeRegion}
-                          onChange={(e) => {
-                            setYoutubeRegion(e.target.value);
-                            handleYoutubePopular(e.target.value);
+                        <Select
+                          value={youtubeRegions.find(r => r.id === youtubeRegion) ? { value: youtubeRegion, label: youtubeRegions.find(r => r.id === youtubeRegion)!.name } : null}
+                          onChange={(option) => {
+                            if (option) {
+                              setYoutubeRegion(option.value);
+                              handleYoutubePopular(option.value);
+                            }
                           }}
-                          className='w-full max-w-md px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200'
-                          disabled={youtubePopularLoading}
-                        >
-                          {youtubeRegions
+                          options={youtubeRegions
                             .sort((a, b) => a.name.localeCompare(b.name))
-                            .map((region) => (
-                              <option key={region.id} value={region.id}>
-                                {region.name}
-                              </option>
-                            ))}
-                        </select>
+                            .map((region) => ({
+                              value: region.id,
+                              label: region.name
+                            }))}
+                          isDisabled={youtubePopularLoading}
+                          isSearchable={true}
+                          placeholder='搜索或选择地区...'
+                          noOptionsMessage={() => '未找到匹配的地区'}
+                          className='max-w-md'
+                          classNamePrefix='react-select'
+                          styles={{
+                            control: (base, state) => ({
+                              ...base,
+                              borderColor: state.isFocused ? '#ef4444' : '#d1d5db',
+                              boxShadow: state.isFocused ? '0 0 0 2px rgba(239, 68, 68, 0.2)' : 'none',
+                              '&:hover': {
+                                borderColor: '#ef4444'
+                              }
+                            }),
+                            option: (base, state) => ({
+                              ...base,
+                              backgroundColor: state.isSelected ? '#ef4444' : state.isFocused ? '#fee2e2' : 'white',
+                              color: state.isSelected ? 'white' : '#1f2937',
+                              '&:active': {
+                                backgroundColor: '#ef4444'
+                              }
+                            })
+                          }}
+                        />
                       </div>
 
                       {/* 警告信息显示 */}
