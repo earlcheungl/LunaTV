@@ -373,6 +373,7 @@ function SearchPageClient() {
   const [bilibiliLoading, setBilibiliLoading] = useState(false);
   const [bilibiliError, setBilibiliError] = useState<string | null>(null);
   const [bilibiliTab, setBilibiliTab] = useState<'video' | 'bangumi' | 'upuser'>('video'); // 视频、番剧或UP主
+  const [bilibiliMode, setBilibiliMode] = useState<'search' | 'popular'>('popular'); // Bilibili模式：搜索或热门推荐
 
   // TMDB演员搜索相关状态
   const [tmdbActorResults, setTmdbActorResults] = useState<any[] | null>(null);
@@ -1166,9 +1167,11 @@ function SearchPageClient() {
       router.push(`/search?q=${encodeURIComponent(trimmed)}`);
       handleYouTubeSearch(trimmed);
     } else if (searchType === 'bilibili') {
-      // Bilibili搜索
-      router.push(`/search?q=${encodeURIComponent(trimmed)}`);
-      handleBilibiliSearch(trimmed);
+      // Bilibili搜索 - 只在搜索模式下执行
+      if (bilibiliMode === 'search') {
+        router.push(`/search?q=${encodeURIComponent(trimmed)}`);
+        handleBilibiliSearch(trimmed);
+      }
     } else if (searchType === 'tmdb-actor') {
       // TMDB演员搜索
       router.push(`/search?q=${encodeURIComponent(trimmed)}`);
@@ -1310,13 +1313,16 @@ function SearchPageClient() {
                     setYoutubeError(null);
                     setTmdbActorResults(null);
                     setTmdbActorError(null);
-                    // 如果当前有搜索词，立即触发Bilibili搜索
-                    const currentQuery = searchQuery.trim() || searchParams?.get('q');
-                    if (currentQuery && showResults) {
-                      setTimeout(() => handleBilibiliSearch(currentQuery), 0);
-                    } else if (!currentQuery && !bilibiliPopular) {
-                      // 如果没有搜索词且还没加载热门推荐，立即加载
+                    // 如果是热门推荐模式且还没加载，立即加载
+                    if (bilibiliMode === 'popular' && !bilibiliPopular) {
                       setTimeout(() => handleBilibiliPopular(), 0);
+                    }
+                    // 如果是搜索模式且当前有搜索词，立即触发Bilibili搜索
+                    if (bilibiliMode === 'search') {
+                      const currentQuery = searchQuery.trim() || searchParams?.get('q');
+                      if (currentQuery && showResults) {
+                        setTimeout(() => handleBilibiliSearch(currentQuery), 0);
+                      }
                     }
                   }}
                   className={`flex-shrink-0 px-4 sm:px-6 py-3 text-sm sm:text-base font-bold rounded-xl transition-all duration-300 whitespace-nowrap min-w-[110px] sm:min-w-0 ${
@@ -1773,13 +1779,55 @@ function SearchPageClient() {
                 <>
                   <div className='mb-4'>
                     <h2 className='text-xl font-bold text-gray-800 dark:text-gray-200'>
-                      {bilibiliResults ? 'Bilibili搜索结果' : '🔥 Bilibili热门推荐'}
+                      {bilibiliMode === 'search' ? 'Bilibili搜索' : '🔥 Bilibili热门推荐'}
                       {(bilibiliLoading || bilibiliPopularLoading) && (
                         <span className='ml-2 inline-block align-middle'>
                           <span className='inline-block h-3 w-3 border-2 border-gray-300 border-t-pink-500 rounded-full animate-spin'></span>
                         </span>
                       )}
                     </h2>
+
+                    {/* Bilibili模式切换 */}
+                    <div className='mt-3 flex items-center gap-2'>
+                      <div className='inline-flex items-center bg-gray-100 dark:bg-gray-800 rounded-lg p-1 space-x-1'>
+                        <button
+                          type='button'
+                          onClick={() => {
+                            setBilibiliMode('search');
+                            // 切换到搜索模式时清除热门推荐
+                            setBilibiliPopular(null);
+                            setBilibiliError(null);
+                          }}
+                          className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                            bilibiliMode === 'search'
+                              ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
+                              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                          }`}
+                        >
+                          🔍 搜索
+                        </button>
+                        <button
+                          type='button'
+                          onClick={() => {
+                            setBilibiliMode('popular');
+                            // 切换到热门推荐模式时清除搜索结果
+                            setBilibiliResults(null);
+                            setBilibiliError(null);
+                            // 如果还没加载热门推荐，立即加载
+                            if (!bilibiliPopular) {
+                              handleBilibiliPopular();
+                            }
+                          }}
+                          className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                            bilibiliMode === 'popular'
+                              ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
+                              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                          }`}
+                        >
+                          🔥 热门推荐
+                        </button>
+                      </div>
+                    </div>
 
                     {/* 视频/番剧/UP主切换 - 仅搜索结果显示 */}
                     {bilibiliResults && (
@@ -1836,40 +1884,50 @@ function SearchPageClient() {
                   )}
 
                   {/* Bilibili结果展示 */}
-                  {bilibiliResults && bilibiliResults.length > 0 ? (
-                    // 显示搜索结果
-                    <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4'>
-                      {bilibiliResults
-                        .filter((item: any) => item.type === bilibiliTab)
-                        .map((item: any, index: number) => {
-                          if (item.type === 'upuser') {
-                            return <BilibiliUpuserCard key={`upuser-${item.mid}-${index}`} upuser={item} />;
-                          } else {
-                            return <BilibiliVideoCard key={`${item.type}-${item.bvid || item.season_id}-${index}`} video={item} />;
-                          }
-                        })}
-                    </div>
-                  ) : bilibiliResults && bilibiliResults.length === 0 ? (
-                    <div className='text-center text-gray-500 py-8 dark:text-gray-400'>
-                      未找到相关Bilibili内容
-                    </div>
-                  ) : bilibiliPopular && bilibiliPopular.length > 0 ? (
-                    // 显示热门推荐
-                    <>
-                      <div className='mb-3 text-sm text-gray-500 dark:text-gray-400'>
-                        输入关键字搜索视频、番剧或UP主
-                      </div>
+                  {bilibiliMode === 'search' ? (
+                    // 搜索模式
+                    bilibiliResults && bilibiliResults.length > 0 ? (
                       <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4'>
-                        {bilibiliPopular.map((video: any, index: number) => (
-                          <BilibiliVideoCard key={`popular-${video.bvid}-${index}`} video={video} />
-                        ))}
+                        {bilibiliResults
+                          .filter((item: any) => item.type === bilibiliTab)
+                          .map((item: any, index: number) => {
+                            if (item.type === 'upuser') {
+                              return <BilibiliUpuserCard key={`upuser-${item.mid}-${index}`} upuser={item} />;
+                            } else {
+                              return <BilibiliVideoCard key={`${item.type}-${item.bvid || item.season_id}-${index}`} video={item} />;
+                            }
+                          })}
                       </div>
-                    </>
-                  ) : !bilibiliLoading && !bilibiliPopularLoading ? (
-                    <div className='text-center text-gray-500 py-8 dark:text-gray-400'>
-                      暂无内容
-                    </div>
-                  ) : null}
+                    ) : bilibiliResults && bilibiliResults.length === 0 ? (
+                      <div className='text-center text-gray-500 py-8 dark:text-gray-400'>
+                        未找到相关Bilibili内容
+                      </div>
+                    ) : !bilibiliLoading ? (
+                      <div className='text-center text-gray-500 py-8 dark:text-gray-400'>
+                        在上方搜索框输入关键词
+                        <br />
+                        开始搜索Bilibili视频和番剧
+                      </div>
+                    ) : null
+                  ) : (
+                    // 热门推荐模式
+                    bilibiliPopular && bilibiliPopular.length > 0 ? (
+                      <>
+                        <div className='mb-3 text-sm text-gray-500 dark:text-gray-400'>
+                          当前显示Bilibili热门视频
+                        </div>
+                        <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4'>
+                          {bilibiliPopular.map((video: any, index: number) => (
+                            <BilibiliVideoCard key={`popular-${video.bvid}-${index}`} video={video} />
+                          ))}
+                        </div>
+                      </>
+                    ) : !bilibiliPopularLoading ? (
+                      <div className='text-center text-gray-500 py-8 dark:text-gray-400'>
+                        暂无热门推荐内容
+                      </div>
+                    ) : null
+                  )}
                 </>
               ) : (
                 /* 原有的影视搜索结果 */
