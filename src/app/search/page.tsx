@@ -1144,12 +1144,13 @@ function SearchPageClient() {
 
     try {
       if (loadMore) {
-        // 加载更多：持续请求多页直到收集到至少10个新视频
+        // 加载更多：持续请求多页直到收集到至少5个新视频
         const existingBvids = new Set((bilibiliPopular || []).map((v: any) => v.bvid));
         const newVideos: any[] = [];
         let currentPage = bilibiliPopularPage;
-        const targetNewVideos = 10; // 目标：每次至少加载10个新视频
-        const maxAttempts = 5; // 最多尝试5页，避免无限循环
+        const targetNewVideos = 5; // 目标：每次至少加载5个新视频
+        const maxAttempts = 10; // 最多尝试10页
+        let lastNoMore = false;
 
         console.log(`🔥 Bilibili热门加载更多: 当前页=${currentPage}, 目标新视频数=${targetNewVideos}`);
 
@@ -1175,20 +1176,32 @@ function SearchPageClient() {
           newVideos.push(...pageNewVideos);
           console.log(`📦 第 ${currentPage} 页: 原始 ${data.videos?.length} 个，新增 ${pageNewVideos.length} 个，累计 ${newVideos.length} 个`);
 
-          // 如果收集够了或者没有更多了，停止
-          if (newVideos.length >= targetNewVideos || data.no_more) {
-            setBilibiliPopularPage(currentPage);
-            setBilibiliPopularHasMore(!data.no_more);
+          lastNoMore = data.no_more;
+
+          // 如果API说没有更多了，停止
+          if (data.no_more) {
+            console.log(`⚠️ API返回no_more，停止请求`);
+            break;
+          }
+
+          // 如果收集够了，停止
+          if (newVideos.length >= targetNewVideos) {
+            console.log(`✅ 已收集到 ${newVideos.length} 个新视频，达到目标`);
             break;
           }
         }
 
+        // 更新页码
+        setBilibiliPopularPage(currentPage);
+
+        // 只有在API明确返回no_more时才隐藏按钮
+        setBilibiliPopularHasMore(!lastNoMore);
+
         if (newVideos.length > 0) {
           setBilibiliPopular(prev => [...(prev || []), ...newVideos]);
-          console.log(`✅ 加载更多完成: 新增 ${newVideos.length} 个视频`);
+          console.log(`✅ 加载更多完成: 新增 ${newVideos.length} 个视频，hasMore=${!lastNoMore}`);
         } else {
-          console.log(`⚠️ 没有找到新视频`);
-          setBilibiliPopularHasMore(false);
+          console.log(`⚠️ 没有找到新视频，但hasMore=${!lastNoMore}`);
         }
       } else {
         // 首次加载
