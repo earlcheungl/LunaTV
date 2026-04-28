@@ -2001,7 +2001,7 @@ function SearchPageClient() {
                                     </div>
                                   </>
                                 ) : (
-                                  <span className='text-sm font-medium text-gray-700 dark:text-gray-300'>加载更多</span>
+                                  <span className='text-sm font-medium text-gray-700 dark:text-gray-300'>👆 点我加载更多</span>
                                 )}
                               </button>
                             </div>
@@ -2190,7 +2190,7 @@ function SearchPageClient() {
                                   </div>
                                 </>
                               ) : (
-                                <span className='text-sm font-medium text-gray-700 dark:text-gray-300'>加载更多</span>
+                                <span className='text-sm font-medium text-gray-700 dark:text-gray-300'>👆 点我加载更多</span>
                               )}
                             </button>
                           </div>
