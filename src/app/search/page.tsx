@@ -1028,6 +1028,7 @@ function SearchPageClient() {
       if (loadMore && youtubePopularPageToken) {
         url += `&pageToken=${youtubePopularPageToken}`;
       }
+      console.log(`🔥 YouTube热门: loadMore=${loadMore}, pageToken=${youtubePopularPageToken}, url=${url}`);
 
       const response = await fetch(url);
       const data = await response.json();
@@ -1041,6 +1042,7 @@ function SearchPageClient() {
 
         setYoutubePopularPageToken(data.nextPageToken || null);
         setYoutubePopularHasMore(!!data.nextPageToken);
+        console.log(`✅ YouTube热门加载成功: videos=${data.videos?.length}, nextPageToken=${data.nextPageToken}`);
 
         // 如果有警告信息，设置警告状态
         if (data.warning) {
@@ -1142,6 +1144,7 @@ function SearchPageClient() {
 
     try {
       const page = loadMore ? bilibiliPopularPage + 1 : 1;
+      console.log(`🔥 Bilibili热门: loadMore=${loadMore}, currentPage=${bilibiliPopularPage}, requestPage=${page}`);
       const response = await fetch(`/api/bilibili/popular?pn=${page}&ps=20`);
       const data = await response.json();
 
@@ -1154,6 +1157,7 @@ function SearchPageClient() {
 
         setBilibiliPopularPage(page);
         setBilibiliPopularHasMore(!data.no_more);
+        console.log(`✅ Bilibili热门加载成功: page=${page}, videos=${data.videos?.length}, no_more=${data.no_more}`);
       } else {
         console.error('获取热门视频失败:', data.error);
         if (!loadMore) {
@@ -1904,6 +1908,9 @@ function SearchPageClient() {
                           onChange={(option) => {
                             if (option) {
                               setYoutubeRegion(option.value);
+                              // 切换地区时重置分页
+                              setYoutubePopularPageToken(null);
+                              setYoutubePopularHasMore(true);
                               handleYoutubePopular(option.value);
                             }
                           }}
@@ -2054,6 +2061,9 @@ function SearchPageClient() {
                             // 切换到热门推荐模式时清除搜索结果
                             setBilibiliResults(null);
                             setBilibiliError(null);
+                            // 重置分页状态
+                            setBilibiliPopularPage(1);
+                            setBilibiliPopularHasMore(true);
                             // 如果还没加载热门推荐，立即加载
                             if (!bilibiliPopular) {
                               handleBilibiliPopular();
