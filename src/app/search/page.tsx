@@ -1157,7 +1157,11 @@ function SearchPageClient() {
 
       if (response.ok && data.success) {
         if (loadMore) {
-          setBilibiliPopular(prev => [...(prev || []), ...(data.videos || [])]);
+          // 合并时去重（根据bvid）
+          const existingBvids = new Set((bilibiliPopular || []).map((v: any) => v.bvid));
+          const newVideos = (data.videos || []).filter((v: any) => !existingBvids.has(v.bvid));
+          setBilibiliPopular(prev => [...(prev || []), ...newVideos]);
+          console.log(`✅ 去重后新增 ${newVideos.length} 个视频（原始 ${data.videos?.length} 个）`);
         } else {
           setBilibiliPopular(data.videos || []);
         }
