@@ -144,6 +144,7 @@ import VirtualGrid from '@/components/VirtualGrid';
 import NetDiskSearchResults from '@/components/NetDiskSearchResults';
 import YouTubeVideoCard from '@/components/YouTubeVideoCard';
 import BilibiliVideoCard from '@/components/BilibiliVideoCard';
+import BilibiliUpuserCard from '@/components/BilibiliUpuserCard';
 import DirectYouTubePlayer from '@/components/DirectYouTubePlayer';
 import TMDBFilterPanel, { TMDBFilterState } from '@/components/TMDBFilterPanel';
 import AcgSearch from '@/components/AcgSearch';
@@ -369,7 +370,7 @@ function SearchPageClient() {
   const [bilibiliResults, setBilibiliResults] = useState<any[] | null>(null);
   const [bilibiliLoading, setBilibiliLoading] = useState(false);
   const [bilibiliError, setBilibiliError] = useState<string | null>(null);
-  const [bilibiliTab, setBilibiliTab] = useState<'video' | 'bangumi'>('video'); // 视频或番剧
+  const [bilibiliTab, setBilibiliTab] = useState<'video' | 'bangumi' | 'upuser'>('video'); // 视频、番剧或UP主
 
   // TMDB演员搜索相关状态
   const [tmdbActorResults, setTmdbActorResults] = useState<any[] | null>(null);
@@ -1016,10 +1017,11 @@ function SearchPageClient() {
       const data = await response.json();
 
       if (response.ok && data.success) {
-        // 合并视频和番剧结果
+        // 合并视频、番剧和UP主结果
         const allResults = [
           ...(data.videos || []).map((v: any) => ({ ...v, type: 'video' })),
-          ...(data.bangumi || []).map((b: any) => ({ ...b, type: 'bangumi' }))
+          ...(data.bangumi || []).map((b: any) => ({ ...b, type: 'bangumi' })),
+          ...(data.upusers || []).map((u: any) => ({ ...u, type: 'upuser' }))
         ];
         setBilibiliResults(allResults);
       } else {
@@ -1752,7 +1754,7 @@ function SearchPageClient() {
                       )}
                     </h2>
 
-                    {/* 视频/番剧切换 */}
+                    {/* 视频/番剧/UP主切换 */}
                     <div className='mt-3 flex items-center gap-2'>
                       <div className='inline-flex items-center bg-gray-100 dark:bg-gray-800 rounded-lg p-1 space-x-1'>
                         <button
@@ -1777,6 +1779,17 @@ function SearchPageClient() {
                         >
                           🎬 番剧
                         </button>
+                        <button
+                          type='button'
+                          onClick={() => setBilibiliTab('upuser')}
+                          className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                            bilibiliTab === 'upuser'
+                              ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
+                              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                          }`}
+                        >
+                          👤 UP主
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -1798,9 +1811,13 @@ function SearchPageClient() {
                     <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4'>
                       {bilibiliResults
                         .filter((item: any) => item.type === bilibiliTab)
-                        .map((item: any, index: number) => (
-                          <BilibiliVideoCard key={`${item.type}-${item.bvid || item.season_id}-${index}`} video={item} />
-                        ))}
+                        .map((item: any, index: number) => {
+                          if (item.type === 'upuser') {
+                            return <BilibiliUpuserCard key={`upuser-${item.mid}-${index}`} upuser={item} />;
+                          } else {
+                            return <BilibiliVideoCard key={`${item.type}-${item.bvid || item.season_id}-${index}`} video={item} />;
+                          }
+                        })}
                     </div>
                   ) : bilibiliResults && bilibiliResults.length === 0 ? (
                     <div className='text-center text-gray-500 py-8 dark:text-gray-400'>
