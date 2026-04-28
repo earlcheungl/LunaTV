@@ -2047,9 +2047,6 @@ function SearchPageClient() {
                             // 切换到热门推荐模式时清除搜索结果
                             setBilibiliResults(null);
                             setBilibiliError(null);
-                            // 重置分页状态
-                            setBilibiliPopularPage(1);
-                            setBilibiliPopularHasMore(true);
                             // 如果还没加载热门推荐，立即加载
                             if (!bilibiliPopular) {
                               handleBilibiliPopular();
