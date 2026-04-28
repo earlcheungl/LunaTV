@@ -362,6 +362,8 @@ function SearchPageClient() {
   const [youtubeResults, setYoutubeResults] = useState<any[] | null>(null);
   const [youtubePopular, setYoutubePopular] = useState<any[] | null>(null); // 热门推荐
   const [youtubePopularLoading, setYoutubePopularLoading] = useState(false);
+  const [youtubePopularPageToken, setYoutubePopularPageToken] = useState<string | null>(null); // YouTube分页token
+  const [youtubePopularHasMore, setYoutubePopularHasMore] = useState(true); // 是否还有更多
   const [youtubeLoading, setYoutubeLoading] = useState(false);
   const [youtubeError, setYoutubeError] = useState<string | null>(null);
   const [youtubeWarning, setYoutubeWarning] = useState<string | null>(null);
@@ -376,6 +378,8 @@ function SearchPageClient() {
   const [bilibiliResults, setBilibiliResults] = useState<any[] | null>(null);
   const [bilibiliPopular, setBilibiliPopular] = useState<any[] | null>(null); // 热门推荐
   const [bilibiliPopularLoading, setBilibiliPopularLoading] = useState(false);
+  const [bilibiliPopularPage, setBilibiliPopularPage] = useState(1); // Bilibili分页页码
+  const [bilibiliPopularHasMore, setBilibiliPopularHasMore] = useState(true); // 是否还有更多
   const [bilibiliLoading, setBilibiliLoading] = useState(false);
   const [bilibiliError, setBilibiliError] = useState<string | null>(null);
   const [bilibiliTab, setBilibiliTab] = useState<'video' | 'bangumi' | 'upuser'>('video'); // 视频、番剧或UP主
@@ -1014,29 +1018,46 @@ function SearchPageClient() {
   };
 
   // YouTube热门推荐函数
-  const handleYoutubePopular = async (regionCode = youtubeRegion) => {
+  const handleYoutubePopular = async (regionCode = youtubeRegion, loadMore = false) => {
     setYoutubePopularLoading(true);
     setYoutubeError(null);
     setYoutubeWarning(null);
 
     try {
-      const response = await fetch(`/api/youtube/popular?regionCode=${regionCode}`);
+      let url = `/api/youtube/popular?regionCode=${regionCode}`;
+      if (loadMore && youtubePopularPageToken) {
+        url += `&pageToken=${youtubePopularPageToken}`;
+      }
+
+      const response = await fetch(url);
       const data = await response.json();
 
       if (response.ok && data.success) {
-        setYoutubePopular(data.videos || []);
+        if (loadMore) {
+          setYoutubePopular(prev => [...(prev || []), ...(data.videos || [])]);
+        } else {
+          setYoutubePopular(data.videos || []);
+        }
+
+        setYoutubePopularPageToken(data.nextPageToken || null);
+        setYoutubePopularHasMore(!!data.nextPageToken);
+
         // 如果有警告信息，设置警告状态
         if (data.warning) {
           setYoutubeWarning(data.warning);
         }
       } else {
         setYoutubeError(data.error || 'YouTube热门视频获取失败');
-        setYoutubePopular([]);
+        if (!loadMore) {
+          setYoutubePopular([]);
+        }
       }
     } catch (error: any) {
       console.error('YouTube热门视频请求失败:', error);
       setYoutubeError('YouTube热门视频请求失败，请稍后重试');
-      setYoutubePopular([]);
+      if (!loadMore) {
+        setYoutubePopular([]);
+      }
     } finally {
       setYoutubePopularLoading(false);
     }
@@ -1116,22 +1137,34 @@ function SearchPageClient() {
   };
 
   // Bilibili热门推荐函数
-  const handleBilibiliPopular = async () => {
+  const handleBilibiliPopular = async (loadMore = false) => {
     setBilibiliPopularLoading(true);
 
     try {
-      const response = await fetch('/api/bilibili/popular?pn=1&ps=20');
+      const page = loadMore ? bilibiliPopularPage + 1 : 1;
+      const response = await fetch(`/api/bilibili/popular?pn=${page}&ps=20`);
       const data = await response.json();
 
       if (response.ok && data.success) {
-        setBilibiliPopular(data.videos || []);
+        if (loadMore) {
+          setBilibiliPopular(prev => [...(prev || []), ...(data.videos || [])]);
+        } else {
+          setBilibiliPopular(data.videos || []);
+        }
+
+        setBilibiliPopularPage(page);
+        setBilibiliPopularHasMore(!data.no_more);
       } else {
         console.error('获取热门视频失败:', data.error);
-        setBilibiliPopular([]);
+        if (!loadMore) {
+          setBilibiliPopular([]);
+        }
       }
     } catch (error: any) {
       console.error('热门视频请求失败:', error);
-      setBilibiliPopular([]);
+      if (!loadMore) {
+        setBilibiliPopular([]);
+      }
     } finally {
       setBilibiliPopularLoading(false);
     }
@@ -1940,6 +1973,39 @@ function SearchPageClient() {
                               <YouTubeVideoCard key={video.id || index} video={video} />
                             ))}
                           </div>
+
+                          {/* 加载更多按钮 */}
+                          {youtubePopularHasMore && (
+                            <div className='mt-6 text-center'>
+                              <button
+                                onClick={() => handleYoutubePopular(youtubeRegion, true)}
+                                disabled={youtubePopularLoading}
+                                className='relative px-8 py-4 rounded-2xl bg-gradient-to-r from-red-50 via-pink-50 to-rose-50 dark:from-red-900/20 dark:via-pink-900/20 dark:to-rose-900/20 border border-red-200/50 dark:border-red-700/50 shadow-lg backdrop-blur-sm overflow-hidden hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed'
+                              >
+                                {youtubePopularLoading ? (
+                                  <>
+                                    <div className='absolute inset-0 bg-gradient-to-r from-red-400/10 via-pink-400/10 to-rose-400/10 animate-pulse'></div>
+                                    <div className='relative flex items-center gap-3 justify-center'>
+                                      <div className='relative'>
+                                        <div className='animate-spin rounded-full h-6 w-6 border-[3px] border-red-200 dark:border-red-800'></div>
+                                        <div className='absolute inset-0 animate-spin rounded-full h-6 w-6 border-[3px] border-transparent border-t-red-500 dark:border-t-red-400'></div>
+                                      </div>
+                                      <div className='flex items-center gap-1'>
+                                        <span className='text-sm font-medium text-gray-700 dark:text-gray-300'>加载中</span>
+                                        <span className='flex gap-0.5'>
+                                          <span className='animate-bounce' style={{ animationDelay: '0ms' }}>.</span>
+                                          <span className='animate-bounce' style={{ animationDelay: '150ms' }}>.</span>
+                                          <span className='animate-bounce' style={{ animationDelay: '300ms' }}>.</span>
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </>
+                                ) : (
+                                  <span className='text-sm font-medium text-gray-700 dark:text-gray-300'>加载更多</span>
+                                )}
+                              </button>
+                            </div>
+                          )}
                         </>
                       ) : !youtubePopularLoading ? (
                         <div className='text-center text-gray-500 py-8 dark:text-gray-400'>
@@ -2096,6 +2162,39 @@ function SearchPageClient() {
                             <BilibiliVideoCard key={`popular-${video.bvid}-${index}`} video={video} />
                           ))}
                         </div>
+
+                        {/* 加载更多按钮 */}
+                        {bilibiliPopularHasMore && (
+                          <div className='mt-6 text-center'>
+                            <button
+                              onClick={() => handleBilibiliPopular(true)}
+                              disabled={bilibiliPopularLoading}
+                              className='relative px-8 py-4 rounded-2xl bg-gradient-to-r from-pink-50 via-rose-50 to-fuchsia-50 dark:from-pink-900/20 dark:via-rose-900/20 dark:to-fuchsia-900/20 border border-pink-200/50 dark:border-pink-700/50 shadow-lg backdrop-blur-sm overflow-hidden hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed'
+                            >
+                              {bilibiliPopularLoading ? (
+                                <>
+                                  <div className='absolute inset-0 bg-gradient-to-r from-pink-400/10 via-rose-400/10 to-fuchsia-400/10 animate-pulse'></div>
+                                  <div className='relative flex items-center gap-3 justify-center'>
+                                    <div className='relative'>
+                                      <div className='animate-spin rounded-full h-6 w-6 border-[3px] border-pink-200 dark:border-pink-800'></div>
+                                      <div className='absolute inset-0 animate-spin rounded-full h-6 w-6 border-[3px] border-transparent border-t-pink-500 dark:border-t-pink-400'></div>
+                                    </div>
+                                    <div className='flex items-center gap-1'>
+                                      <span className='text-sm font-medium text-gray-700 dark:text-gray-300'>加载中</span>
+                                      <span className='flex gap-0.5'>
+                                        <span className='animate-bounce' style={{ animationDelay: '0ms' }}>.</span>
+                                        <span className='animate-bounce' style={{ animationDelay: '150ms' }}>.</span>
+                                        <span className='animate-bounce' style={{ animationDelay: '300ms' }}>.</span>
+                                      </span>
+                                    </div>
+                                  </div>
+                                </>
+                              ) : (
+                                <span className='text-sm font-medium text-gray-700 dark:text-gray-300'>加载更多</span>
+                              )}
+                            </button>
+                          </div>
+                        )}
                       </>
                     ) : !bilibiliPopularLoading ? (
                       <div className='text-center text-gray-500 py-8 dark:text-gray-400'>
