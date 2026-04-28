@@ -370,6 +370,7 @@ function SearchPageClient() {
   const [youtubeRegion, setYoutubeRegion] = useState<string>('US'); // 热门视频地区
   const [youtubeRegions, setYoutubeRegions] = useState<Array<{id: string, name: string}>>([]);
   const [youtubeRegionsLoading, setYoutubeRegionsLoading] = useState(false);
+  const [youtubeRegionSearch, setYoutubeRegionSearch] = useState<string>(''); // 地区搜索关键词
 
   // Bilibili搜索相关状态
   const [bilibiliResults, setBilibiliResults] = useState<any[] | null>(null);
@@ -1863,21 +1864,56 @@ function SearchPageClient() {
                         <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
                           选择地区：
                         </label>
-                        <select
-                          value={youtubeRegion}
-                          onChange={(e) => {
-                            setYoutubeRegion(e.target.value);
-                            handleYoutubePopular(e.target.value);
-                          }}
-                          className='w-full max-w-md px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200'
-                          disabled={youtubePopularLoading}
-                        >
-                          {youtubeRegions.map((region) => (
-                            <option key={region.id} value={region.id}>
-                              {region.name}
-                            </option>
-                          ))}
-                        </select>
+                        <div className='relative max-w-md'>
+                          {/* 搜索输入框 */}
+                          <input
+                            type='text'
+                            placeholder='搜索地区... (例如: Malaysia, Japan)'
+                            value={youtubeRegionSearch}
+                            onChange={(e) => setYoutubeRegionSearch(e.target.value)}
+                            className='w-full px-3 py-2 mb-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200'
+                            disabled={youtubePopularLoading}
+                          />
+                          {/* 地区下拉列表 */}
+                          <select
+                            value={youtubeRegion}
+                            onChange={(e) => {
+                              setYoutubeRegion(e.target.value);
+                              handleYoutubePopular(e.target.value);
+                              setYoutubeRegionSearch(''); // 清空搜索
+                            }}
+                            className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200'
+                            disabled={youtubePopularLoading}
+                            size={8}
+                          >
+                            {youtubeRegions
+                              .filter((region) => {
+                                if (!youtubeRegionSearch.trim()) return true;
+                                const search = youtubeRegionSearch.toLowerCase();
+                                return (
+                                  region.name.toLowerCase().includes(search) ||
+                                  region.id.toLowerCase().includes(search)
+                                );
+                              })
+                              .sort((a, b) => a.name.localeCompare(b.name))
+                              .map((region) => (
+                                <option key={region.id} value={region.id}>
+                                  {region.name}
+                                </option>
+                              ))}
+                          </select>
+                          {youtubeRegionSearch && (
+                            <div className='mt-1 text-xs text-gray-500 dark:text-gray-400'>
+                              找到 {youtubeRegions.filter((region) => {
+                                const search = youtubeRegionSearch.toLowerCase();
+                                return (
+                                  region.name.toLowerCase().includes(search) ||
+                                  region.id.toLowerCase().includes(search)
+                                );
+                              }).length} 个地区
+                            </div>
+                          )}
+                        </div>
                       </div>
 
                       {/* 警告信息显示 */}
