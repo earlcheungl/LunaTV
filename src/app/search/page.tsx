@@ -911,9 +911,6 @@ function SearchPageClient() {
         } else if (searchType === 'tmdb-actor') {
           handleTmdbActorSearch(currentQuery, tmdbActorType, tmdbFilterState);
         }
-      } else if (searchType === 'bilibili' && !bilibiliPopular) {
-        // Bilibili tab 且没有搜索词，加载热门推荐
-        handleBilibiliPopular();
       }
     }
   }, [searchType, netdiskResourceType, showResults, searchQuery, searchParams]);
@@ -1317,6 +1314,9 @@ function SearchPageClient() {
                     const currentQuery = searchQuery.trim() || searchParams?.get('q');
                     if (currentQuery && showResults) {
                       setTimeout(() => handleBilibiliSearch(currentQuery), 0);
+                    } else if (!bilibiliPopular) {
+                      // 如果没有搜索词且还没加载热门推荐，立即加载
+                      setTimeout(() => handleBilibiliPopular(), 0);
                     }
                   }}
                   className={`flex-shrink-0 px-4 sm:px-6 py-3 text-sm sm:text-base font-bold rounded-xl transition-all duration-300 whitespace-nowrap min-w-[110px] sm:min-w-0 ${
