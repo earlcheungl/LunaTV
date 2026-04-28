@@ -1147,6 +1147,13 @@ function SearchPageClient() {
       console.log(`🔥 Bilibili热门: loadMore=${loadMore}, currentPage=${bilibiliPopularPage}, requestPage=${page}`);
       const response = await fetch(`/api/bilibili/popular?pn=${page}&ps=20`);
       const data = await response.json();
+      console.log(`📦 Bilibili API返回:`, {
+        success: data.success,
+        videosCount: data.videos?.length,
+        no_more: data.no_more,
+        fromCache: data.fromCache,
+        firstVideoTitle: data.videos?.[0]?.title?.substring(0, 30)
+      });
 
       if (response.ok && data.success) {
         if (loadMore) {
