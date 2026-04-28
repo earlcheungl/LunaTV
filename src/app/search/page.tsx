@@ -1422,7 +1422,7 @@ function SearchPageClient() {
 
         {/* 搜索结果或搜索历史 */}
         <div className='max-w-[95%] mx-auto mt-12 overflow-visible'>
-          {showResults || (searchType === 'bilibili' && bilibiliMode === 'popular') ? (
+          {showResults || searchType === 'bilibili' ? (
             <section className='mb-12'>
               {searchType === 'netdisk' ? (
                 /* 网盘搜索结果 */
