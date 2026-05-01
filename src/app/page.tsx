@@ -84,20 +84,29 @@ export default async function Home() {
     );
   }
 
-  // 🔥 启动预取但不等待 - 让页面立即渲染，数据在后台加载
-  // 根据 Next.js 文档：不要在顶层 await，这会阻塞整个页面
-  // https://nextjs.org/docs/app/guides/streaming#push-dynamic-access-down
-  console.log('[Server] Starting prefetch for', prefetchPromises.length, 'queries (non-blocking)');
+  // 🔥 Prefetch with timeout protection
+  // Wait for prefetch to complete (max 3 seconds) to populate queryClient cache
+  // If APIs are fast: users get fully rendered content (SSR benefit)
+  // If APIs are slow: timeout prevents white screen, client-side loading continues
+  console.log('[Server] Starting prefetch for', prefetchPromises.length, 'queries with 3s timeout');
 
-  // 在后台记录结果，但不阻塞页面渲染
-  Promise.allSettled(prefetchPromises).then((results) => {
-    results.forEach((result, index) => {
-      if (result.status === 'rejected') {
-        console.error('[Server] Prefetch failed for query', index, ':', result.reason);
-      } else {
-        console.log('[Server] Prefetch succeeded for query', index);
-      }
-    });
+  const prefetchWithTimeout = Promise.race([
+    Promise.allSettled(prefetchPromises),
+    new Promise<PromiseSettledResult<void>[]>(resolve =>
+      setTimeout(() => {
+        console.warn('[Server] Prefetch timeout after 3s, returning page immediately');
+        resolve([]);
+      }, 3000)
+    )
+  ]);
+
+  const results = await prefetchWithTimeout;
+  results.forEach((result, index) => {
+    if (result.status === 'rejected') {
+      console.error('[Server] Prefetch failed for query', index, ':', result.reason);
+    } else if (result.status === 'fulfilled') {
+      console.log('[Server] Prefetch succeeded for query', index);
+    }
   });
 
   return (
