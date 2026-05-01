@@ -50,9 +50,9 @@ export async function getDoubanCategories(params: {
     const items: DoubanItem[] = data.items.map((item) => ({
       id: item.id,
       title: item.title,
-      poster: item.pic.large || item.pic.normal,
-      rate: item.rating?.value?.toString() || '0',
-      year: item.card_subtitle.split('/')[0]?.trim() || '',
+      poster: item.pic?.normal || item.pic?.large || '',
+      rate: item.rating?.value ? item.rating.value.toFixed(1) : '',
+      year: item.card_subtitle?.match(/(\d{4})/)?.[1] || '',
     }));
 
     return {
