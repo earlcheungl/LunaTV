@@ -4,9 +4,9 @@ import { Suspense } from 'react';
 import { HydrationBoundary, dehydrate } from '@tanstack/react-query';
 import { getQueryClient } from '@/lib/get-query-client';
 import { getConfig } from '@/lib/config';
-import { getDoubanCategories } from '@/lib/douban.client';
-import { GetBangumiCalendarData } from '@/lib/bangumi.client';
-import { getRecommendedShortDramas } from '@/lib/shortdrama.client';
+import { getDoubanCategories } from '@/lib/douban.server';
+import { GetBangumiCalendarData } from '@/lib/bangumi.server';
+import { getRecommendedShortDramas } from '@/lib/shortdrama.server';
 import HomeClient from './HomeClient';
 
 // 🔥 Server Component - 在服务端预取数据
