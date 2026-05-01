@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Film } from 'lucide-react';
+import { Film, Popcorn, Star, Sparkles } from 'lucide-react';
 
 /**
  * Cinematic Loading Fallback - Movie-themed loading experience
@@ -19,16 +19,17 @@ import { Film } from 'lucide-react';
  */
 
 const loadingMessages = [
-  { text: '正在为您准备今晚的观影清单...', emoji: '🎬' },
-  { text: '爆米花准备好了吗？', emoji: '🍿' },
-  { text: '发现了数百部精彩影片...', emoji: '⭐' },
-  { text: '正在寻找最适合您的推荐...', emoji: '✨' },
+  { icon: Film, text: '正在为您准备今晚的观影清单...', emoji: '🎬' },
+  { icon: Popcorn, text: '爆米花准备好了吗？', emoji: '🍿' },
+  { icon: Star, text: '发现了数百部精彩影片...', emoji: '⭐' },
+  { icon: Sparkles, text: '正在寻找最适合您的推荐...', emoji: '✨' },
 ];
 
 export function CinematicLoadingFallback() {
   const [messageIndex, setMessageIndex] = useState(0);
   const [isVisible, setIsVisible] = useState(false);
   const [bingWallpaper, setBingWallpaper] = useState<string>('');
+  const [wallpaperLoaded, setWallpaperLoaded] = useState(false);
 
   // Fetch Bing wallpaper
   useEffect(() => {
@@ -61,6 +62,7 @@ export function CinematicLoadingFallback() {
   }, []);
 
   const currentMessage = loadingMessages[messageIndex];
+  const IconComponent = currentMessage.icon;
 
   return (
     <div
@@ -68,17 +70,16 @@ export function CinematicLoadingFallback() {
         isVisible ? 'opacity-100' : 'opacity-0'
       }`}
     >
-      {/* Bing wallpaper background with blur */}
+      {/* Bing wallpaper background with blur and fade-in */}
+      <div className="absolute inset-0 bg-gradient-to-b from-gray-900 via-gray-800 to-black" />
       {bingWallpaper && (
         <div
-          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+          className={`absolute inset-0 bg-cover bg-center bg-no-repeat transition-opacity duration-1000 ${
+            wallpaperLoaded ? 'opacity-100' : 'opacity-0'
+          }`}
           style={{ backgroundImage: `url(${bingWallpaper})` }}
+          onLoad={() => setWallpaperLoaded(true)}
         />
-      )}
-
-      {/* Fallback gradient background */}
-      {!bingWallpaper && (
-        <div className="absolute inset-0 bg-gradient-to-b from-gray-900 via-gray-800 to-black" />
       )}
 
       {/* Dark overlay + blur effect */}
@@ -118,9 +119,9 @@ export function CinematicLoadingFallback() {
               <div className="absolute w-3 h-3 bg-gray-900 rounded-full bottom-2 left-2" />
               <div className="absolute w-3 h-3 bg-gray-900 rounded-full bottom-2 right-2" />
 
-              {/* Center icon - Fixed Film icon */}
+              {/* Center icon */}
               <div className="w-20 h-20 rounded-full bg-gray-900 flex items-center justify-center">
-                <Film className="w-10 h-10 text-white" />
+                <IconComponent className="w-10 h-10 text-white" />
               </div>
             </div>
           </div>
