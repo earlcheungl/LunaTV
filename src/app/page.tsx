@@ -85,7 +85,15 @@ export default async function Home() {
   }
 
   // 🔥 并行预取所有数据
-  await Promise.all(prefetchPromises);
+  console.log('[Server] Starting prefetch for', prefetchPromises.length, 'queries');
+  const results = await Promise.allSettled(prefetchPromises);
+  results.forEach((result, index) => {
+    if (result.status === 'rejected') {
+      console.error('[Server] Prefetch failed for query', index, ':', result.reason);
+    } else {
+      console.log('[Server] Prefetch succeeded for query', index);
+    }
+  });
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>

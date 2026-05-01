@@ -601,39 +601,6 @@ function HomeClient({ initialConfig }: {
       }, 3000);
     }
 
-    // 延迟加载短剧详情 - 只在显示短剧模块时加载
-    if (state.homePageConfig.showHotShortDramas && homeData.hotShortDramas.length > 0) {
-      setTimeout(() => {
-        Promise.all(
-          homeData.hotShortDramas.slice(0, 2).map(async (drama) => {
-            try {
-              const response = await fetch(`/api/shortdrama/detail?id=${drama.id}&episode=1`);
-              if (response.ok) {
-                const detailData = await response.json();
-                if (detailData.desc) {
-                  return { id: drama.id, description: detailData.desc };
-                }
-              }
-            } catch (error) {
-              console.warn(`获取短剧 ${drama.id} 详情失败:`, error);
-            }
-            return null;
-          })
-        ).then((results) => {
-          dispatch({
-            type: 'UPDATE_HOT_SHORT_DRAMAS',
-            payload: (prev) => {
-              const base = prev.length > 0 ? prev : homeData.hotShortDramas;
-              return base.map(d => {
-                const detail = results.find(r => r?.id === d.id);
-                return detail ? { ...d, description: detail.description } : d;
-              });
-            }
-          });
-        });
-      }, 3000);
-    }
-
     // 🔄 异步加载即将上映数据
     fetch('/api/release-calendar?limit=100')
       .then(res => {
