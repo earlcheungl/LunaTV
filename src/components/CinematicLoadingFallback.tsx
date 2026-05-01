@@ -82,8 +82,9 @@ export function CinematicLoadingFallback() {
         />
       )}
 
-      {/* Dark overlay + blur effect */}
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-2xl" />
+      {/* Gradient overlay layers (like login page) */}
+      <div className="absolute inset-0 bg-gradient-to-br from-purple-600/40 via-blue-600/30 to-pink-500/40 dark:from-purple-900/50 dark:via-blue-900/40 dark:to-pink-900/50" />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-black/30" />
 
       {/* Subtle animated background stars */}
       <div className="absolute inset-0 overflow-hidden">
