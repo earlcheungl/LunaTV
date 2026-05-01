@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Film, Popcorn, Star, Sparkles } from 'lucide-react';
+import { Film } from 'lucide-react';
 
 /**
  * Cinematic Loading Fallback - Movie-themed loading experience
@@ -19,10 +19,10 @@ import { Film, Popcorn, Star, Sparkles } from 'lucide-react';
  */
 
 const loadingMessages = [
-  { icon: Film, text: '正在为您准备今晚的观影清单...', emoji: '🎬' },
-  { icon: Popcorn, text: '爆米花准备好了吗？', emoji: '🍿' },
-  { icon: Star, text: '发现了数百部精彩影片...', emoji: '⭐' },
-  { icon: Sparkles, text: '正在寻找最适合您的推荐...', emoji: '✨' },
+  { text: '正在为您准备今晚的观影清单...', emoji: '🎬' },
+  { text: '爆米花准备好了吗？', emoji: '🍿' },
+  { text: '发现了数百部精彩影片...', emoji: '⭐' },
+  { text: '正在寻找最适合您的推荐...', emoji: '✨' },
 ];
 
 export function CinematicLoadingFallback() {
@@ -61,7 +61,6 @@ export function CinematicLoadingFallback() {
   }, []);
 
   const currentMessage = loadingMessages[messageIndex];
-  const IconComponent = currentMessage.icon;
 
   return (
     <div
@@ -119,9 +118,9 @@ export function CinematicLoadingFallback() {
               <div className="absolute w-3 h-3 bg-gray-900 rounded-full bottom-2 left-2" />
               <div className="absolute w-3 h-3 bg-gray-900 rounded-full bottom-2 right-2" />
 
-              {/* Center icon */}
+              {/* Center icon - Fixed Film icon */}
               <div className="w-20 h-20 rounded-full bg-gray-900 flex items-center justify-center">
-                <IconComponent className="w-10 h-10 text-white" />
+                <Film className="w-10 h-10 text-white" />
               </div>
             </div>
           </div>
