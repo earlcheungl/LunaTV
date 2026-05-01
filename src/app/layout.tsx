@@ -20,7 +20,7 @@ import { GlobalCacheProvider } from '../contexts/GlobalCacheContext';
 import { DownloadPanel } from '../components/download/DownloadPanel';
 import ChatFloatingWindow from '../components/watch-room/ChatFloatingWindow';
 import QueryProvider from '../components/QueryProvider';
-import { PageLoadingFallback } from '../components/PageLoadingFallback';
+import { CinematicLoadingFallback } from '../components/CinematicLoadingFallback';
 
 const inter = Inter({ subsets: ['latin'] });
 export const dynamic = 'force-dynamic';
@@ -159,7 +159,7 @@ export default async function RootLayout({
               <DownloadProvider>
                 <WatchRoomProvider>
                   <SiteProvider siteName={siteName} announcement={announcement}>
-                    <Suspense fallback={<PageLoadingFallback />}>
+                    <Suspense fallback={<CinematicLoadingFallback />}>
                       <SessionTracker />
                       {children}
                       <GlobalErrorIndicator />
