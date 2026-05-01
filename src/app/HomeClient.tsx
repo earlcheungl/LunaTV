@@ -23,6 +23,7 @@ import { useHomePageQueries } from '@/hooks/useHomePageQueries';
 import { getDoubanDetails } from '@/lib/douban.client';
 import { DoubanItem } from '@/lib/types';
 import { getAuthInfoFromBrowserCookie } from '@/lib/auth';
+import { CinematicLoadingFallback } from '@/components/CinematicLoadingFallback';
 
 import CapsuleSwitch from '@/components/CapsuleSwitch';
 import ContinueWatching from '@/components/ContinueWatching';
@@ -680,6 +681,13 @@ function HomeClient({ initialConfig }: {
     dispatch({ type: 'SET_SHOW_ANNOUNCEMENT', payload: false });
     localStorage.setItem('hasSeenAnnouncement', announcement); // 记录已查看弹窗
   };
+
+  // 🔥 Show cinematic loading screen while data is being fetched
+  // This ensures users see the beautiful loading animation instead of skeleton screens
+  // when client-side queries are still loading (e.g., after prefetch timeout)
+  if (loading) {
+    return <CinematicLoadingFallback />;
+  }
 
   return (
     <PageLayout>
