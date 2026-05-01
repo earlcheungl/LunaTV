@@ -689,13 +689,6 @@ function HomeClient({ initialConfig }: {
     localStorage.setItem('hasSeenAnnouncement', announcement); // 记录已查看弹窗
   };
 
-  // 🔥 Show cinematic loading screen while data is being fetched
-  // This ensures users see the beautiful loading animation instead of skeleton screens
-  // when client-side queries are still loading (e.g., after prefetch timeout)
-  if (loading) {
-    return <CinematicLoadingFallback />;
-  }
-
   return (
     <PageLayout>
       {/* Telegram 新用户欢迎弹窗 */}
