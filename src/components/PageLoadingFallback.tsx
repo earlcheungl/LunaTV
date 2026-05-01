@@ -1,3 +1,5 @@
+'use client';
+
 /**
  * Page Loading Fallback Component
  *

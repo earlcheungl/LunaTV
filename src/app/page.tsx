@@ -90,24 +90,31 @@ export default async function Home() {
   // If APIs are slow: timeout prevents white screen, client-side loading continues
   console.log('[Server] Starting prefetch for', prefetchPromises.length, 'queries with 3s timeout');
 
-  const prefetchWithTimeout = Promise.race([
-    Promise.allSettled(prefetchPromises),
-    new Promise<PromiseSettledResult<void>[]>(resolve =>
-      setTimeout(() => {
-        console.warn('[Server] Prefetch timeout after 3s, returning page immediately');
-        resolve([]);
-      }, 3000)
-    )
+  const timeoutPromise = new Promise<'timeout'>((resolve) =>
+    setTimeout(() => {
+      console.warn('[Server] Prefetch timeout after 3s, returning page immediately');
+      resolve('timeout');
+    }, 3000)
+  );
+
+  const prefetchResult = await Promise.race([
+    Promise.allSettled(prefetchPromises).then(results => ({ type: 'completed' as const, results })),
+    timeoutPromise.then(() => ({ type: 'timeout' as const }))
   ]);
 
-  const results = await prefetchWithTimeout;
-  results.forEach((result, index) => {
-    if (result.status === 'rejected') {
-      console.error('[Server] Prefetch failed for query', index, ':', result.reason);
-    } else if (result.status === 'fulfilled') {
-      console.log('[Server] Prefetch succeeded for query', index);
-    }
-  });
+  if (prefetchResult.type === 'completed') {
+    // Prefetch completed within timeout
+    prefetchResult.results.forEach((result, index) => {
+      if (result.status === 'rejected') {
+        console.error('[Server] Prefetch failed for query', index, ':', result.reason);
+      } else {
+        console.log('[Server] Prefetch succeeded for query', index);
+      }
+    });
+  } else {
+    // Timeout occurred - some queries may still be in progress
+    console.warn('[Server] Prefetch timed out, some queries may still be loading on client side');
+  }
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
