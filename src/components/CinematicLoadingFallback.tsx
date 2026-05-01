@@ -29,7 +29,6 @@ export function CinematicLoadingFallback() {
   const [messageIndex, setMessageIndex] = useState(0);
   const [isVisible, setIsVisible] = useState(false);
   const [bingWallpaper, setBingWallpaper] = useState<string>('');
-  const [wallpaperLoaded, setWallpaperLoaded] = useState(false);
 
   // Fetch Bing wallpaper
   useEffect(() => {
@@ -70,16 +69,17 @@ export function CinematicLoadingFallback() {
         isVisible ? 'opacity-100' : 'opacity-0'
       }`}
     >
-      {/* Bing wallpaper background with blur and fade-in */}
-      <div className="absolute inset-0 bg-gradient-to-b from-gray-900 via-gray-800 to-black" />
+      {/* Bing wallpaper background */}
       {bingWallpaper && (
         <div
-          className={`absolute inset-0 bg-cover bg-center bg-no-repeat transition-opacity duration-1000 ${
-            wallpaperLoaded ? 'opacity-100' : 'opacity-0'
-          }`}
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat transition-opacity duration-1000"
           style={{ backgroundImage: `url(${bingWallpaper})` }}
-          onLoad={() => setWallpaperLoaded(true)}
         />
+      )}
+
+      {/* Fallback gradient background */}
+      {!bingWallpaper && (
+        <div className="absolute inset-0 bg-gradient-to-b from-gray-900 via-gray-800 to-black" />
       )}
 
       {/* Gradient overlay layers (like login page) */}
