@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, no-console */
 
 import { DoubanItem, DoubanResult } from './types';
-import { getRandomUserAgent } from './user-agent';
+import { fetchDoubanData } from './douban';
 
 interface DoubanCategoryApiResponse {
   total: number;
@@ -31,21 +31,7 @@ export async function getDoubanCategories(params: {
   try {
     const url = `https://m.douban.com/rexxar/api/v2/subject/recent_hot/${kind}?start=${pageStart}&limit=${pageLimit}&category=${category}&type=${type}`;
 
-    const response = await fetch(url, {
-      headers: {
-        'User-Agent': getRandomUserAgent(),
-        'Referer': 'https://m.douban.com/',
-      },
-      next: {
-        revalidate: 7200, // 2 hours
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const data: DoubanCategoryApiResponse = await response.json();
+    const data = await fetchDoubanData<DoubanCategoryApiResponse>(url);
 
     const items: DoubanItem[] = data.items.map((item) => ({
       id: item.id,
