@@ -265,13 +265,6 @@ function HomeClient({ initialConfig }: {
   // 🚀 计算 loading 状态：首次加载时显示 loading
   const loading = homeLoading;
 
-  // 🔥 Show cinematic loading screen while data is being fetched
-  // This ensures users see the beautiful loading animation instead of skeleton screens
-  // when client-side queries are still loading (e.g., after prefetch timeout)
-  if (loading) {
-    return <CinematicLoadingFallback />;
-  }
-
   // 🚀 Web Worker引用
   const workerRef = useRef<Worker | null>(null);
 
@@ -688,6 +681,12 @@ function HomeClient({ initialConfig }: {
     dispatch({ type: 'SET_SHOW_ANNOUNCEMENT', payload: false });
     localStorage.setItem('hasSeenAnnouncement', announcement); // 记录已查看弹窗
   };
+
+  // 🔥 Show cinematic loading screen while data is being fetched
+  // This ensures users see the beautiful loading animation instead of skeleton screens
+  if (loading) {
+    return <CinematicLoadingFallback />;
+  }
 
   return (
     <PageLayout>
