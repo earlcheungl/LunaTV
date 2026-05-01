@@ -262,10 +262,17 @@ function HomeClient({ initialConfig }: {
 
   const bangumiCalendarData = homeData?.bangumiCalendar || [];
 
-  // 🚀 计算 loading 状态：数据获取中时显示 loading（使用 isFetching 而不是 isLoading）
-  // isFetching: 只要在请求就是 true（即使有缓存）
-  // isLoading: 只有第一次加载 + 无缓存时才是 true
-  const loading = homeFetching && !homeData;
+  // 🚀 计算 loading 状态：数据获取中且没有任何数据时显示 loading
+  // 检查是否所有数据都是空的（没有缓存数据）
+  const hasAnyData = homeData && (
+    homeData.hotMovies.length > 0 ||
+    homeData.hotTvShows.length > 0 ||
+    homeData.hotVarietyShows.length > 0 ||
+    homeData.hotAnime.length > 0 ||
+    homeData.hotShortDramas.length > 0 ||
+    homeData.bangumiCalendar.length > 0
+  );
+  const loading = homeFetching && !hasAnyData;
 
   // 🚀 Web Worker引用
   const workerRef = useRef<Worker | null>(null);
