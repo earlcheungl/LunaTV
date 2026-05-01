@@ -85,16 +85,16 @@ export default async function Home() {
   }
 
   // 🔥 Prefetch with timeout protection
-  // Wait for prefetch to complete (max 3 seconds) to populate queryClient cache
+  // Wait for prefetch to complete (max 1 second) to populate queryClient cache
   // If APIs are fast: users get fully rendered content (SSR benefit)
   // If APIs are slow: timeout prevents white screen, client-side loading continues
-  console.log('[Server] Starting prefetch for', prefetchPromises.length, 'queries with 3s timeout');
+  console.log('[Server] Starting prefetch for', prefetchPromises.length, 'queries with 1s timeout');
 
   const timeoutPromise = new Promise<'timeout'>((resolve) =>
     setTimeout(() => {
-      console.warn('[Server] Prefetch timeout after 3s, returning page immediately');
+      console.warn('[Server] Prefetch timeout after 1s, returning page immediately');
       resolve('timeout');
-    }, 3000)
+    }, 1000)
   );
 
   const prefetchResult = await Promise.race([
