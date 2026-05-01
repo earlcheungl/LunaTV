@@ -29,7 +29,7 @@ export async function getDoubanCategories(params: {
   const { kind, category, type, pageLimit = 20, pageStart = 0 } = params;
 
   try {
-    const url = `https://m.douban.com/rexxar/api/v2/${kind}_${category}?type=${type}&start=${pageStart}&count=${pageLimit}`;
+    const url = `https://m.douban.com/rexxar/api/v2/subject/recent_hot/${kind}?start=${pageStart}&limit=${pageLimit}&category=${category}&type=${type}`;
 
     const response = await fetch(url, {
       headers: {
