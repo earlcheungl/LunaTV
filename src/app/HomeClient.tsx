@@ -262,8 +262,10 @@ function HomeClient({ initialConfig }: {
 
   const bangumiCalendarData = homeData?.bangumiCalendar || [];
 
-  // 🚀 计算 loading 状态：首次加载时显示 loading
-  const loading = homeLoading;
+  // 🚀 计算 loading 状态：数据获取中时显示 loading（使用 isFetching 而不是 isLoading）
+  // isFetching: 只要在请求就是 true（即使有缓存）
+  // isLoading: 只有第一次加载 + 无缓存时才是 true
+  const loading = homeFetching && !homeData;
 
   // 🚀 Web Worker引用
   const workerRef = useRef<Worker | null>(null);
