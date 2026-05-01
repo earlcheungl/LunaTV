@@ -262,17 +262,15 @@ function HomeClient({ initialConfig }: {
 
   const bangumiCalendarData = homeData?.bangumiCalendar || [];
 
-  // 🚀 计算 loading 状态：数据获取中且没有任何数据时显示 loading
-  // 检查是否所有数据都是空的（没有缓存数据）
-  const hasAnyData = homeData && (
-    homeData.hotMovies.length > 0 ||
-    homeData.hotTvShows.length > 0 ||
-    homeData.hotVarietyShows.length > 0 ||
-    homeData.hotAnime.length > 0 ||
-    homeData.hotShortDramas.length > 0 ||
-    homeData.bangumiCalendar.length > 0
-  );
-  const loading = homeFetching && !hasAnyData;
+  // 🚀 计算 loading 状态：首次加载时显示 loading
+  const loading = homeLoading;
+
+  // 🔥 Show cinematic loading screen while data is being fetched
+  // This ensures users see the beautiful loading animation instead of skeleton screens
+  // when client-side queries are still loading (e.g., after prefetch timeout)
+  if (loading) {
+    return <CinematicLoadingFallback />;
+  }
 
   // 🚀 Web Worker引用
   const workerRef = useRef<Worker | null>(null);
