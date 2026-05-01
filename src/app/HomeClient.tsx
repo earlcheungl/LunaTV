@@ -185,11 +185,11 @@ function HomeClient({ initialConfig }: {
     errors: homeErrors,
     refetch: refetchHomeData,
   } = useHomePageQueries({
-    showHotMovies: state.homePageConfig.showHotMovies,
-    showHotTvShows: state.homePageConfig.showHotTvShows,
-    showHotVariety: state.homePageConfig.showHotVariety,
-    showNewAnime: state.homePageConfig.showNewAnime,
-    showHotShortDramas: state.homePageConfig.showHotShortDramas,
+    showHotMovies: initialConfig.showHotMovies,
+    showHotTvShows: initialConfig.showHotTvShows,
+    showHotVariety: initialConfig.showHotVariety,
+    showNewAnime: initialConfig.showNewAnime,
+    showHotShortDramas: initialConfig.showHotShortDramas,
   });
 
   const { announcement } = useSite();
@@ -460,20 +460,7 @@ function HomeClient({ initialConfig }: {
     // 清除可能缓存了空数据的短剧推荐缓存
     clearRecommendsCache().catch(console.error);
 
-    // 🔥 获取首页模块配置（客户端）
-    fetch('/api/admin/homepage-config')
-      .then((res) => {
-        if (!res.ok) return null;
-        return res.json();
-      })
-      .then((data) => {
-        if (data?.success && data?.config) {
-          dispatch({ type: 'SET_HOME_PAGE_CONFIG', payload: data.config });
-        }
-      })
-      .catch(() => {
-        // 配置获取失败时使用默认值，不影响页面显示
-      });
+    // 🔥 配置已经从服务端传入，不需要客户端再次获取
 
     // 🚀 TanStack Query 会自动加载数据，无需手动调用
 
