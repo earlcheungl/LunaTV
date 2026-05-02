@@ -49,6 +49,7 @@ function HeroBanner({
   const [isMuted, setIsMuted] = useState(true);
   const [videoLoaded, setVideoLoaded] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const isMountedRef = useRef(true);
 
   // 🚀 TanStack Query - 刷新后的trailer URL缓存
   // 替换 useState + localStorage 手动管理
@@ -220,6 +221,13 @@ function HeroBanner({
     };
   }, [items, refreshedTrailerUrls, refreshTrailerUrl, enableVideo]);
 
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
   return (
     <div
       className="relative w-full h-[50vh] sm:h-[55vh] md:h-[60vh] overflow-hidden group"
@@ -270,6 +278,8 @@ function HeroBanner({
                   playsInline
                   preload="metadata"
                   onError={async (e) => {
+                    if (!isMountedRef.current) return;
+
                     const video = e.currentTarget;
                     console.error('[HeroBanner] 视频加载失败:', {
                       title: item.title,
@@ -288,7 +298,7 @@ function HeroBanner({
 
                         // 重新刷新URL
                         const newUrl = await refreshTrailerUrl(item.douban_id);
-                        if (newUrl) {
+                        if (newUrl && isMountedRef.current) {
                           // 重新加载视频
                           video.load();
                         }
@@ -299,6 +309,8 @@ function HeroBanner({
                     }
                   }}
                   onLoadedData={(e) => {
+                    if (!isMountedRef.current) return;
+
                     console.log('[HeroBanner] 视频加载成功:', item.title);
                     setVideoLoaded(true); // 视频加载完成，淡入显示
                     // 确保视频开始播放
