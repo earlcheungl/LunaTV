@@ -3,6 +3,7 @@
 'use client';
 
 import { AlertCircle, CheckCircle, User, Lock, Sparkles, UserPlus, Shield } from 'lucide-react';
+import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useState } from 'react';
 
@@ -435,14 +436,15 @@ function RegisterPageClient() {
             <p className='text-center text-gray-600 dark:text-gray-400 text-sm mb-3'>
               已有账户？
             </p>
-            <a
+            <Link
               href='/login'
+              prefetch={true}
               className='group flex items-center justify-center gap-2 w-full px-6 py-2.5 rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800/50 text-blue-700 dark:text-blue-400 text-sm font-semibold hover:from-blue-100 hover:to-indigo-100 dark:hover:from-blue-900/30 dark:hover:to-indigo-900/30 hover:border-blue-300 dark:hover:border-blue-700 transition-all duration-300 hover:shadow-md hover:scale-[1.02] active:scale-100'
             >
               <Lock className='w-4 h-4' />
               <span>立即登录</span>
               <span className='inline-block transition-transform group-hover:translate-x-1'>→</span>
-            </a>
+            </Link>
           </div>
         </form>
       </div>
