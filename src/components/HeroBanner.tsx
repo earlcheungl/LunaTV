@@ -279,17 +279,22 @@ function HeroBanner({
 
                     // 检测是否是403错误（trailer URL过期）
                     if (item.douban_id) {
-                      // 如果缓存中有URL，说明之前刷新过，但现在又失败了
-                      // 需要清除缓存中的旧URL，重新刷新
-                      if (refreshedTrailerUrls[item.douban_id]) {
-                        clearTrailerMutation.mutate({ doubanId: item.douban_id });
-                      }
+                      try {
+                        // 如果缓存中有URL，说明之前刷新过，但现在又失败了
+                        // 需要清除缓存中的旧URL，重新刷新
+                        if (refreshedTrailerUrls[item.douban_id]) {
+                          clearTrailerMutation.mutate({ doubanId: item.douban_id });
+                        }
 
-                      // 重新刷新URL
-                      const newUrl = await refreshTrailerUrl(item.douban_id);
-                      if (newUrl) {
-                        // 重新加载视频
-                        video.load();
+                        // 重新刷新URL
+                        const newUrl = await refreshTrailerUrl(item.douban_id);
+                        if (newUrl) {
+                          // 重新加载视频
+                          video.load();
+                        }
+                      } catch (error) {
+                        // 静默处理错误，避免页面崩溃
+                        console.warn('[HeroBanner] 刷新trailer URL失败，将继续显示背景图片:', error);
                       }
                     }
                   }}
