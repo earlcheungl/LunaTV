@@ -205,7 +205,9 @@ function RegisterPageClient() {
   };
 
   if (!shouldShowRegister) {
-    return null; // 不显示任何内容，避免白屏闪烁
+    return (
+      <div className='relative min-h-screen flex items-center justify-center px-3 sm:px-4 py-8 sm:py-0 overflow-hidden bg-gradient-to-br from-purple-100 via-blue-50 to-pink-100 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900' />
+    );
   }
 
   // 如果注册被禁用，显示提示页面
