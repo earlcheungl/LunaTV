@@ -50,6 +50,7 @@ function HeroBanner({
   const [videoLoaded, setVideoLoaded] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const isMountedRef = useRef(true);
+  const transitionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // 🚀 TanStack Query - 刷新后的trailer URL缓存
   // 替换 useState + localStorage 手动管理
@@ -101,27 +102,60 @@ function HeroBanner({
 
   // 导航函数
   const handleNext = useCallback(() => {
-    if (isTransitioning) return;
+    if (isTransitioning || !isMountedRef.current) return;
     setIsTransitioning(true);
     setVideoLoaded(false); // 重置视频加载状态
     setCurrentIndex((prev) => (prev + 1) % items.length);
-    setTimeout(() => setIsTransitioning(false), 800); // Netflix风格：更慢的过渡
+
+    // 清除之前的timeout
+    if (transitionTimeoutRef.current) {
+      clearTimeout(transitionTimeoutRef.current);
+    }
+
+    // 设置新的timeout
+    transitionTimeoutRef.current = setTimeout(() => {
+      if (isMountedRef.current) {
+        setIsTransitioning(false);
+      }
+    }, 800); // Netflix风格：更慢的过渡
   }, [isTransitioning, items.length]);
 
   const handlePrev = useCallback(() => {
-    if (isTransitioning) return;
+    if (isTransitioning || !isMountedRef.current) return;
     setIsTransitioning(true);
     setVideoLoaded(false); // 重置视频加载状态
     setCurrentIndex((prev) => (prev - 1 + items.length) % items.length);
-    setTimeout(() => setIsTransitioning(false), 800);
+
+    // 清除之前的timeout
+    if (transitionTimeoutRef.current) {
+      clearTimeout(transitionTimeoutRef.current);
+    }
+
+    // 设置新的timeout
+    transitionTimeoutRef.current = setTimeout(() => {
+      if (isMountedRef.current) {
+        setIsTransitioning(false);
+      }
+    }, 800);
   }, [isTransitioning, items.length]);
 
   const handleIndicatorClick = (index: number) => {
-    if (isTransitioning || index === currentIndex) return;
+    if (isTransitioning || index === currentIndex || !isMountedRef.current) return;
     setIsTransitioning(true);
     setVideoLoaded(false); // 重置视频加载状态
     setCurrentIndex(index);
-    setTimeout(() => setIsTransitioning(false), 800);
+
+    // 清除之前的timeout
+    if (transitionTimeoutRef.current) {
+      clearTimeout(transitionTimeoutRef.current);
+    }
+
+    // 设置新的timeout
+    transitionTimeoutRef.current = setTimeout(() => {
+      if (isMountedRef.current) {
+        setIsTransitioning(false);
+      }
+    }, 800);
   };
 
   const toggleMute = () => {
@@ -225,6 +259,10 @@ function HeroBanner({
   useEffect(() => {
     return () => {
       isMountedRef.current = false;
+      // 清理所有pending的timeouts
+      if (transitionTimeoutRef.current) {
+        clearTimeout(transitionTimeoutRef.current);
+      }
     };
   }, []);
 
@@ -312,11 +350,15 @@ function HeroBanner({
                     if (!isMountedRef.current) return;
 
                     console.log('[HeroBanner] 视频加载成功:', item.title);
-                    setVideoLoaded(true); // 视频加载完成，淡入显示
+                    if (isMountedRef.current) {
+                      setVideoLoaded(true); // 视频加载完成，淡入显示
+                    }
                     // 确保视频开始播放
                     const video = e.currentTarget;
                     video.play().catch((error) => {
-                      console.error('[HeroBanner] 视频自动播放失败:', error);
+                      if (isMountedRef.current) {
+                        console.error('[HeroBanner] 视频自动播放失败:', error);
+                      }
                     });
                   }}
                 >
