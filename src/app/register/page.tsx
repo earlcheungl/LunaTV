@@ -4,7 +4,7 @@
 
 import { AlertCircle, CheckCircle, User, Lock, Sparkles, UserPlus, Shield } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 
 import { CURRENT_VERSION } from '@/lib/version';
 import { checkForUpdates, UpdateStatus } from '@/lib/version_check';
@@ -453,5 +453,9 @@ function RegisterPageClient() {
 }
 
 export default function RegisterPage() {
-  return <RegisterPageClient />;
+  return (
+    <Suspense fallback={null}>
+      <RegisterPageClient />
+    </Suspense>
+  );
 }
