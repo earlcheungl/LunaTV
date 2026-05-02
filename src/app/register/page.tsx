@@ -204,7 +204,7 @@ function RegisterPageClient() {
   };
 
   if (!shouldShowRegister) {
-    return <div>Loading...</div>;
+    return null; // 不显示任何内容，避免白屏闪烁
   }
 
   // 如果注册被禁用，显示提示页面
