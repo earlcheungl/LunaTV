@@ -187,19 +187,37 @@ function HeroBanner({
       return;
     }
 
+    let isMounted = true;
+
     const checkAndRefreshMissingTrailers = async () => {
       for (const item of items) {
+        // 检查组件是否仍然挂载
+        if (!isMounted) break;
+
         // 如果有 douban_id 但没有 trailerUrl，尝试获取
         if (item.douban_id && !item.trailerUrl && !refreshedTrailerUrls[item.douban_id]) {
           console.log('[HeroBanner] 检测到缺失的 trailer，尝试获取:', item.title);
-          await refreshTrailerUrl(item.douban_id);
+          try {
+            await refreshTrailerUrl(item.douban_id);
+          } catch (error) {
+            // 忽略错误，继续处理下一个
+            console.warn('[HeroBanner] 获取 trailer 失败:', error);
+          }
         }
       }
     };
 
     // 延迟执行，避免阻塞初始渲染
-    const timer = setTimeout(checkAndRefreshMissingTrailers, 1000);
-    return () => clearTimeout(timer);
+    const timer = setTimeout(() => {
+      if (isMounted) {
+        checkAndRefreshMissingTrailers();
+      }
+    }, 1000);
+
+    return () => {
+      isMounted = false;
+      clearTimeout(timer);
+    };
   }, [items, refreshedTrailerUrls, refreshTrailerUrl, enableVideo]);
 
   return (
