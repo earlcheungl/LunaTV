@@ -728,12 +728,18 @@ function HomeClient({ initialConfig }: {
 
   // 🔥 Show cinematic loading screen while data is being fetched
   // This ensures users see the beautiful loading animation instead of skeleton screens
-  if (loading) {
-    return <CinematicLoadingFallback />;
-  }
+  // 🔥 Use overlay instead of unmounting to prevent component remount issues
+  const showCinematicLoading = loading;
 
   return (
     <PageLayout>
+      {/* 🔥 Cinematic loading overlay - doesn't unmount content */}
+      {showCinematicLoading && (
+        <div className="fixed inset-0 z-50">
+          <CinematicLoadingFallback />
+        </div>
+      )}
+
       {/* Telegram 新用户欢迎弹窗 */}
       <TelegramWelcomeModal />
 
