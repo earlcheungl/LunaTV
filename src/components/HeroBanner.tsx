@@ -85,8 +85,8 @@ function HeroBanner({
 
   // 🚀 TanStack Query - 刷新过期的trailer URL
   // 替换手动 useCallback + setState + localStorage
-  const refreshTrailerUrl = useCallback(async (doubanId: number | string) => {
-    const result = await refreshTrailerMutation.mutateAsync({ doubanId });
+  const refreshTrailerUrl = useCallback(async (doubanId: number | string, force = false) => {
+    const result = await refreshTrailerMutation.mutateAsync({ doubanId, force });
     return result;
   }, [refreshTrailerMutation]);
 
@@ -299,8 +299,8 @@ function HeroBanner({
                         clearTrailerMutation.mutate({ doubanId: item.douban_id });
                       }
 
-                      // 重新刷新URL
-                      const newUrl = await refreshTrailerUrl(item.douban_id);
+                      // 重新刷新URL（强制刷新，跳过服务端缓存）
+                      const newUrl = await refreshTrailerUrl(item.douban_id, true);
                       if (newUrl) {
                         // 重新加载视频
                         video.load();

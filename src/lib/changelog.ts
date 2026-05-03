@@ -14,7 +14,7 @@ export const changelog: ChangelogEntry[] = [
     version: "6.5.1",
     date: "2026-05-04",
     added: [
-      // 无新增内容
+    "🗄️ Redis全局缓存预告片URL：实现基于Redis的全局缓存机制，减少对豆瓣API的请求次数，所有用户共享缓存，支持Kvrocks和Upstash，24小时TTL"
     ],
     changed: [
       // 无变更内容

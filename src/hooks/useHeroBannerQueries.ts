@@ -52,12 +52,13 @@ export function useRefreshTrailerUrlMutation() {
   return useMutation<
     string | null,
     Error,
-    { doubanId: number | string }
+    { doubanId: number | string; force?: boolean }
   >({
-    mutationFn: async ({ doubanId }) => {
-      console.log('[HeroBanner] 检测到trailer URL过期，重新获取:', doubanId);
+    mutationFn: async ({ doubanId, force = false }) => {
+      console.log('[HeroBanner] 检测到trailer URL过期，重新获取:', doubanId, force ? '(强制刷新)' : '');
 
-      const response = await fetch(`/api/douban/refresh-trailer?id=${doubanId}`);
+      const url = `/api/douban/refresh-trailer?id=${doubanId}${force ? '&force=true' : ''}`;
+      const response = await fetch(url);
       const data = await response.json();
 
       // 如果是404且明确标记为NO_TRAILER，记录并返回特殊标记（带时间戳，24小时后重试）

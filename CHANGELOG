@@ -1,5 +1,9 @@
 ## [6.5.1] - 2026-05-04
 
+### Added
+
+- 🗄️ Redis全局缓存预告片URL：实现基于Redis的全局缓存机制，减少对豆瓣API的请求次数，所有用户共享缓存，支持Kvrocks和Upstash，24小时TTL
+
 ### Fixed
 
 - 🐛 修复加载屏幕导致组件重复挂载问题：将CinematicLoadingFallback从替换整个页面改为overlay覆盖方式，防止HeroBanner等组件在loading时被卸载和重新挂载
