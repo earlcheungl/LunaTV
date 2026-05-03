@@ -11,6 +11,22 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "6.5.1",
+    date: "2026-05-04",
+    added: [
+      // 无新增内容
+    ],
+    changed: [
+      // 无变更内容
+    ],
+    fixed: [
+    "🐛 修复加载屏幕导致组件重复挂载问题：将CinematicLoadingFallback从替换整个页面改为overlay覆盖方式，防止HeroBanner等组件在loading时被卸载和重新挂载",
+    "🔄 修复无限trailer URL请求问题：解决因组件频繁mount/unmount导致的疯狂请求豆瓣API问题，避免IP被封",
+    "🎬 优化登录注册页面体验：转换注册页面为服务端组件，消除白屏闪烁，添加渐变背景到加载状态，优化页面导航过渡效果",
+    "🎨 修复Bilibili统计显示：当数值为零时隐藏Bilibili统计信息以改善用户体验"
+    ]
+  },
+  {
     version: "6.5.0",
     date: "2026-05-02",
     added: [
