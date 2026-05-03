@@ -93,7 +93,12 @@ function HeroBanner({
   // 获取当前有效的trailer URL（优先使用刷新后的）
   const getEffectiveTrailerUrl = (item: BannerItem) => {
     if (item.douban_id && refreshedTrailerUrls[item.douban_id]) {
-      return refreshedTrailerUrls[item.douban_id];
+      const cachedUrl = refreshedTrailerUrls[item.douban_id];
+      // 如果标记为NO_TRAILER或FAILED，返回null避免尝试播放
+      if (cachedUrl === 'NO_TRAILER' || cachedUrl.startsWith('FAILED_')) {
+        return null;
+      }
+      return cachedUrl;
     }
     return item.trailerUrl;
   };
@@ -188,11 +193,28 @@ function HeroBanner({
     }
 
     const checkAndRefreshMissingTrailers = async () => {
+      const RETRY_COOLDOWN = 5 * 60 * 1000; // 5分钟冷却期
+
       for (const item of items) {
+        const cachedValue = refreshedTrailerUrls[item.douban_id];
+
         // 如果有 douban_id 但没有 trailerUrl，尝试获取
-        if (item.douban_id && !item.trailerUrl && !refreshedTrailerUrls[item.douban_id]) {
+        if (item.douban_id && !item.trailerUrl && !cachedValue) {
           console.log('[HeroBanner] 检测到缺失的 trailer，尝试获取:', item.title);
           await refreshTrailerUrl(item.douban_id);
+        } else if (cachedValue === 'NO_TRAILER') {
+          console.log('[HeroBanner] 该影片已标记为无预告片，跳过:', item.title);
+        } else if (cachedValue?.startsWith('FAILED_')) {
+          // 检查失败时间戳，如果超过冷却期则重试
+          const failedTime = parseInt(cachedValue.split('_')[1]);
+          const now = Date.now();
+          if (now - failedTime > RETRY_COOLDOWN) {
+            console.log('[HeroBanner] 失败冷却期已过，重新尝试:', item.title);
+            await refreshTrailerUrl(item.douban_id);
+          } else {
+            const remainingMinutes = Math.ceil((RETRY_COOLDOWN - (now - failedTime)) / 60000);
+            console.log(`[HeroBanner] 该影片获取失败，${remainingMinutes}分钟后重试:`, item.title);
+          }
         }
       }
     };
