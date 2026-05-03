@@ -195,6 +195,7 @@ function HeroBanner({
     const checkAndRefreshMissingTrailers = async () => {
       const RETRY_COOLDOWN = 5 * 60 * 1000; // 5分钟冷却期（服务端错误）
       const NO_TRAILER_COOLDOWN = 24 * 60 * 60 * 1000; // 24小时冷却期（无预告片）
+      const REQUEST_DELAY = 2000; // 每次请求之间延迟2秒，避免触发豆瓣限流
 
       for (const item of items) {
         const cachedValue = refreshedTrailerUrls[item.douban_id];
@@ -203,6 +204,8 @@ function HeroBanner({
         if (item.douban_id && !item.trailerUrl && !cachedValue) {
           console.log('[HeroBanner] 检测到缺失的 trailer，尝试获取:', item.title);
           await refreshTrailerUrl(item.douban_id);
+          // 延迟后再请求下一个，避免触发豆瓣限流
+          await new Promise(resolve => setTimeout(resolve, REQUEST_DELAY));
         } else if (cachedValue?.startsWith('NO_TRAILER_')) {
           // 检查无预告片标记的时间戳，24小时后重试
           const markedTime = parseInt(cachedValue.split('_')[2]);
@@ -210,6 +213,7 @@ function HeroBanner({
           if (now - markedTime > NO_TRAILER_COOLDOWN) {
             console.log('[HeroBanner] 无预告片标记已过期（24小时），重新尝试:', item.title);
             await refreshTrailerUrl(item.douban_id);
+            await new Promise(resolve => setTimeout(resolve, REQUEST_DELAY));
           } else {
             const remainingHours = Math.ceil((NO_TRAILER_COOLDOWN - (now - markedTime)) / 3600000);
             console.log(`[HeroBanner] 该影片无预告片，${remainingHours}小时后重试:`, item.title);
@@ -221,6 +225,7 @@ function HeroBanner({
           if (now - failedTime > RETRY_COOLDOWN) {
             console.log('[HeroBanner] 失败冷却期已过，重新尝试:', item.title);
             await refreshTrailerUrl(item.douban_id);
+            await new Promise(resolve => setTimeout(resolve, REQUEST_DELAY));
           } else {
             const remainingMinutes = Math.ceil((RETRY_COOLDOWN - (now - failedTime)) / 60000);
             console.log(`[HeroBanner] 该影片获取失败，${remainingMinutes}分钟后重试:`, item.title);
