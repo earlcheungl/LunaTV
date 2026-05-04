@@ -132,7 +132,7 @@ const generateKeyFromName = (name: string): string => {
     .map((char) => {
       if (/[a-zA-Z]/.test(char)) return char.toUpperCase();
       if (/[0-9]/.test(char)) return char;
-      const result = pinyin(char, { pattern: 'first' });
+      const result = pinyin(char, { pattern: 'first', toneType: 'none' });
       return result || char;
     })
     .join('');
