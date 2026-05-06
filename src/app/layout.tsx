@@ -22,6 +22,7 @@ import { DownloadPanel } from '../components/download/DownloadPanel';
 import ChatFloatingWindow from '../components/watch-room/ChatFloatingWindow';
 import QueryProvider from '../components/QueryProvider';
 import { CinematicLoadingFallback } from '../components/CinematicLoadingFallback';
+import RouteWarmup from '../components/RouteWarmup';
 
 const inter = Inter({ subsets: ['latin'] });
 export const dynamic = 'force-dynamic';
@@ -161,6 +162,7 @@ export default async function RootLayout({
                 <WatchRoomProvider>
                   <SiteProvider siteName={siteName} announcement={announcement}>
                     <SessionTracker />
+                    <RouteWarmup />
                     {/* 导航栏在 layout 层，自动持久化 */}
                     <NavigationShell />
                     {/* 主内容区域 - 只有这部分会在路由切换时重新渲染 */}
