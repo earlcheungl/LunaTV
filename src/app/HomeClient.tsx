@@ -22,6 +22,7 @@ import { CinematicLoadingFallback } from '@/components/CinematicLoadingFallback'
 import { useFavoritesQuery } from '@/hooks/useFavoritesQuery';
 import { usePlayRecordsQuery } from '@/hooks/usePlayRecordsQuery';
 import { useRemindersQuery } from '@/hooks/useRemindersQuery';
+import { useWatchingUpdatesQuery } from '@/hooks/useWatchingUpdates';
 
 import CapsuleSwitch from '@/components/CapsuleSwitch';
 import ContinueWatching from '@/components/ContinueWatching';
@@ -431,6 +432,15 @@ function HomeClient({ initialConfig }: {
 
   // 🚀 TanStack Query - 使用 useQuery 获取收藏数据（自动缓存，跨页面持久化）
   const { data: allFavorites = {} } = useQuery(allFavoritesOptions());
+
+  // 🚀 TanStack Query - 追番更新后台检查（30分钟自动刷新）
+  // 在主页启用，让 query 保持 active 状态，refetchInterval 才能工作
+  const authInfo = getAuthInfoFromBrowserCookie();
+  const storageType = typeof window !== 'undefined' ? localStorage.getItem('storageType') : null;
+  const showWatchingUpdates = authInfo?.username && storageType !== 'localstorage';
+  useWatchingUpdatesQuery({
+    enabled: showWatchingUpdates, // 只在登录且非 localStorage 模式时启用
+  });
 
   // 🚀 TanStack Query - 使用 useQuery 获取播放记录（自动缓存，跨页面持久化）
   const { data: allPlayRecords = {} } = useQuery(allPlayRecordsOptions());
