@@ -269,8 +269,16 @@ export function useWatchingUpdatesQuery(options?: {
   const queryClient = useQueryClient();
 
   // 获取播放记录
-  const { data: playRecordsArray, isSuccess: playRecordsLoaded } = usePlayRecordsArrayQuery({
+  const { data: playRecordsArray, isSuccess: playRecordsLoaded, isLoading: playRecordsLoading } = usePlayRecordsArrayQuery({
     enabled: options?.enabled,
+  });
+
+  // 调试信息
+  console.log('🔍 [追番更新] 依赖查询状态:', {
+    playRecordsLoaded,
+    playRecordsLoading,
+    playRecordsCount: playRecordsArray?.length ?? 0,
+    enabled: options?.enabled
   });
 
   // 获取数据源映射
