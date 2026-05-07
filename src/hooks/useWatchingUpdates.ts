@@ -93,7 +93,10 @@ async function checkSingleRecordUpdate(
     }
 
     const detailData = await response.json();
-    const latestEpisodes = detailData.total || record.total_episodes;
+    // 从 episodes 数组长度获取最新集数（API 返回的是 episodes 数组，不是 total 字段）
+    const latestEpisodes = detailData.episodes?.length || detailData.episodes_titles?.length || detailData.total || record.total_episodes;
+
+    console.log(`📊 [追番更新] ${record.title}: API返回${latestEpisodes}集, 播放记录${record.total_episodes}集, 原始${record.original_episodes || record.total_episodes}集`);
 
     // 获取原始集数（观看时的集数）
     const originalTotalEpisodes = record.original_episodes || record.total_episodes;
