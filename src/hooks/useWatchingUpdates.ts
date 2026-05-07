@@ -72,7 +72,8 @@ async function checkSingleRecordUpdate(
 }> {
   try {
     // 调用 API 获取最新详情（绕过缓存，确保获取最新集数）
-    const apiUrl = `/api/detail?source=${sourceKey}&id=${videoId}`;
+    // 添加时间戳参数绕过 CDN 缓存
+    const apiUrl = `/api/detail?source=${sourceKey}&id=${videoId}&_t=${Date.now()}`;
     const response = await fetch(apiUrl, {
       cache: 'no-store',
     });
