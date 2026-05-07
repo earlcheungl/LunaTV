@@ -288,49 +288,30 @@ export function useWatchingUpdatesQuery(options?: {
     queryFn: async (): Promise<WatchingUpdate> => {
       console.log('🔄 [追番更新] 开始检查追番更新...');
 
-      if (!playRecordsArray || playRecordsArray.length === 0) {
-        console.log('⚠️ [追番更新] 无播放记录，跳过更新检查');
-        return {
-          hasUpdates: false,
-          timestamp: Date.now(),
-          updatedCount: 0,
-          continueWatchingCount: 0,
-          newReleasesCount: 0,
-          updatedSeries: [],
-        };
-      }
-
-      console.log(`📋 [追番更新] 找到 ${playRecordsArray.length} 条播放记录`);
-
-      // 筛选多集剧的记录（与Alpha版本保持一致，不限制是否看完）
-      const candidateRecords = playRecordsArray.filter((record) => {
-        return record.total_episodes > 1;
-      });
-
-      console.log(`🎯 [追番更新] 找到 ${candidateRecords.length} 个可能有更新的剧集`);
-      if (candidateRecords.length > 0) {
-        console.log('[追番更新] 候选记录详情:', candidateRecords.map(r => ({ title: r.title, index: r.index, total: r.total_episodes })));
-      }
-
-      if (candidateRecords.length === 0) {
-        console.log('⚠️ [追番更新] 无符合条件的剧集，跳过检查');
-        return {
-          hasUpdates: false,
-          timestamp: Date.now(),
-          updatedCount: 0,
-          continueWatchingCount: 0,
-          newReleasesCount: 0,
-          updatedSeries: [],
-        };
-      }
-
       let updatedCount = 0;
       let continueWatchingCount = 0;
       let newReleasesCount = 0;
       const updatedSeries: WatchingUpdate['updatedSeries'] = [];
 
-      // 并发检查所有记录的更新状态
-      const updatePromises = candidateRecords.map(async (record) => {
+      // 检查播放记录更新
+      if (!playRecordsArray || playRecordsArray.length === 0) {
+        console.log('⚠️ [追番更新] 无播放记录，跳过播放记录更新检查');
+      } else {
+        console.log(`📋 [追番更新] 找到 ${playRecordsArray.length} 条播放记录`);
+
+        // 筛选多集剧的记录（与Alpha版本保持一致，不限制是否看完）
+        const candidateRecords = playRecordsArray.filter((record) => {
+          return record.total_episodes > 1;
+        });
+
+        console.log(`🎯 [追番更新] 找到 ${candidateRecords.length} 个可能有更新的剧集`);
+        if (candidateRecords.length > 0) {
+          console.log('[追番更新] 候选记录详情:', candidateRecords.map(r => ({ title: r.title, index: r.index, total: r.total_episodes })));
+        }
+
+        if (candidateRecords.length > 0) {
+          // 并发检查所有记录的更新状态
+          const updatePromises = candidateRecords.map(async (record) => {
         try {
           // 从存储key中解析出videoId
           const [sourceName, videoId] = record.key.split('+');
@@ -419,8 +400,10 @@ export function useWatchingUpdatesQuery(options?: {
         }
       });
 
-      // 等待所有检查完成
-      await Promise.all(updatePromises);
+          // 等待所有检查完成
+          await Promise.all(updatePromises);
+        }
+      }
 
       // 🎬 检查想看中的新上映内容
       console.log('🎬 开始检查想看中的新上映内容...');
@@ -444,7 +427,7 @@ export function useWatchingUpdatesQuery(options?: {
               if (reminder.releaseDate > today) return false;
 
               // 检查是否已经在播放记录中（避免重复）
-              const isInPlayRecords = playRecordsArray.some(r =>
+              const isInPlayRecords = playRecordsArray && playRecordsArray.some(r =>
                 r.title === reminder.title && r.year === reminder.year
               );
 
