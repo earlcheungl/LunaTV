@@ -71,9 +71,11 @@ async function checkSingleRecordUpdate(
   latestEpisodes: number;
 }> {
   try {
-    // 调用 API 获取最新详情
+    // 调用 API 获取最新详情（绕过缓存，确保获取最新集数）
     const apiUrl = `/api/detail?source=${sourceKey}&id=${videoId}`;
-    const response = await fetch(apiUrl);
+    const response = await fetch(apiUrl, {
+      cache: 'no-store',
+    });
 
     if (!response.ok) {
       console.warn(`获取${record.title}详情失败:`, response.status);
