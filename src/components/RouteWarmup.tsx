@@ -48,6 +48,11 @@ export default function RouteWarmup() {
   const pathname = usePathname();
 
   useEffect(() => {
+    // Skip warmup on auth pages
+    if (pathname === '/login' || pathname === '/register' || pathname === '/oidc-register') {
+      return;
+    }
+
     if (shouldSkipWarmup()) return;
 
     let cancelled = false;
