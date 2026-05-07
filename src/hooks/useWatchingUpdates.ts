@@ -303,7 +303,10 @@ export function useRefreshWatchingUpdates() {
   return () => {
     // 强制刷新播放记录
     queryClient.invalidateQueries({ queryKey: ['playRecords'] });
-    // 强制刷新追番更新
-    queryClient.invalidateQueries({ queryKey: ['watchingUpdates'] });
+    // 强制刷新追番更新（type: 'all' 确保即使 inactive 也会刷新）
+    queryClient.invalidateQueries({
+      queryKey: ['watchingUpdates'],
+      refetchType: 'all'
+    });
   };
 }
