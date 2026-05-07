@@ -278,7 +278,12 @@ export function useWatchingUpdatesQuery(options?: {
     playRecordsLoaded,
     playRecordsLoading,
     playRecordsCount: playRecordsArray?.length ?? 0,
-    enabled: options?.enabled
+    sourceMapLoaded,
+    sourceMapSize: sourceMap?.size ?? 0,
+    remindersLoaded,
+    remindersCount: reminders ? Object.keys(reminders).length : 0,
+    enabled: options?.enabled,
+    finalEnabled: options?.enabled && playRecordsLoaded && sourceMapLoaded && remindersLoaded && !!playRecordsArray && !!sourceMap && !!reminders
   });
 
   // 获取数据源映射
@@ -582,6 +587,11 @@ export function useRefreshWatchingUpdates() {
     // 强制刷新播放记录（type: 'all' 确保即使 inactive 也会刷新）
     queryClient.invalidateQueries({
       queryKey: ['playRecords'],
+      refetchType: 'all'
+    });
+    // 强制刷新想看列表（用于检查新上映）
+    queryClient.invalidateQueries({
+      queryKey: ['reminders'],
       refetchType: 'all'
     });
     // 强制刷新追番更新（type: 'all' 确保即使 inactive 也会刷新）
