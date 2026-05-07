@@ -93,9 +93,9 @@ function ContinueWatching({ className }: ContinueWatchingProps) {
       series.videoId === id
     );
 
-    // 如果找到匹配的剧集且有最新集数信息，返回最新集数；否则返回原始集数
-    return matchedSeries && matchedSeries.totalEpisodes
-      ? matchedSeries.totalEpisodes
+    // 如果找到匹配的剧集且有最新集数信息，返回最新集数（使用 latestEpisodes，包含了 protectedTotalEpisodes）
+    return matchedSeries && matchedSeries.latestEpisodes
+      ? matchedSeries.latestEpisodes
       : record.total_episodes;
   };
 
