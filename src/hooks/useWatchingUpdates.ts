@@ -128,9 +128,11 @@ async function checkSingleRecordUpdate(
   latestEpisodes: number;
 }> {
   try {
-    // 调用 API 获取最新详情（绕过缓存，确保获取最新集数）
-    // 添加时间戳参数绕过 CDN 缓存
-    const apiUrl = `/api/detail?source=${sourceKey}&id=${videoId}&_t=${Date.now()}`;
+    // 调用 API 获取最新详情（使用10分钟时间戳分片缓存）
+    // 将时间戳向下取整到10分钟，同一个10分钟内的请求会命中CDN缓存
+    // 这样既能获取较新的数据，又能减少对视频源的请求压力
+    const cacheKey = Math.floor(Date.now() / 600000) * 600000; // 600000ms = 10分钟
+    const apiUrl = `/api/detail?source=${sourceKey}&id=${videoId}&_t=${cacheKey}`;
     console.log(`🔍 [追番更新] ${record.title} 调用API:`, apiUrl);
     const response = await fetch(apiUrl, {
       cache: 'no-store',
