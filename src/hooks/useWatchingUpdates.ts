@@ -268,38 +268,48 @@ export function useWatchingUpdatesQuery(options?: {
 }) {
   const queryClient = useQueryClient();
 
-  // 获取播放记录
-  const { data: playRecordsArray, isSuccess: playRecordsLoaded, isLoading: playRecordsLoading } = usePlayRecordsArrayQuery({
-    enabled: options?.enabled,
-  });
-
-  // 调试信息
-  console.log('🔍 [追番更新] 依赖查询状态:', {
-    playRecordsLoaded,
-    playRecordsLoading,
-    playRecordsCount: playRecordsArray?.length ?? 0,
-    sourceMapLoaded,
-    sourceMapSize: sourceMap?.size ?? 0,
-    remindersLoaded,
-    remindersCount: reminders ? Object.keys(reminders).length : 0,
-    enabled: options?.enabled,
-    finalEnabled: options?.enabled && playRecordsLoaded && sourceMapLoaded && remindersLoaded && !!playRecordsArray && !!sourceMap && !!reminders
-  });
-
-  // 获取数据源映射
-  const { data: sourceMap, isSuccess: sourceMapLoaded } = useSourceMapQuery({
-    enabled: options?.enabled,
-  });
-
-  // 获取想看列表（用于检查新上映内容）
-  const { data: reminders, isSuccess: remindersLoaded } = useRemindersQuery({
-    enabled: options?.enabled,
-  });
-
   return useQuery({
     queryKey: ['watchingUpdates', options?.forceRefresh ? Date.now() : 'cached'] as const,
     queryFn: async (): Promise<WatchingUpdate> => {
       console.log('🔄 [追番更新] 开始检查追番更新...');
+
+      // 🔑 在 queryFn 内部获取依赖数据，确保每次都是最新的
+      const playRecordsArray = await queryClient.ensureQueryData({
+        queryKey: ['playRecords', 'array'],
+        queryFn: async () => {
+          const response = await fetch('/api/playrecords');
+          if (!response.ok) throw new Error('Failed to fetch play records');
+          const data = await response.json() as Record<string, PlayRecord>;
+          return Object.entries(data)
+            .map(([key, record]) => ({ ...record, key }))
+            .sort((a, b) => (b.save_time || 0) - (a.save_time || 0));
+        },
+      });
+
+      const sourceMap = await queryClient.ensureQueryData({
+        queryKey: ['sources', 'map'],
+        queryFn: async () => {
+          const response = await fetch('/api/sources');
+          if (!response.ok) throw new Error('Failed to fetch sources');
+          const sources = await response.json();
+          const map = new Map<string, string>();
+          sources.forEach((source: any) => {
+            if (source.name && source.key) {
+              map.set(source.name, source.key);
+            }
+          });
+          return map;
+        },
+      });
+
+      const reminders = await queryClient.ensureQueryData({
+        queryKey: ['reminders'],
+        queryFn: async () => {
+          const response = await fetch('/api/reminders');
+          if (!response.ok) throw new Error('Failed to fetch reminders');
+          return await response.json() as Record<string, Reminder>;
+        },
+      });
 
       let updatedCount = 0;
       let continueWatchingCount = 0;
@@ -570,8 +580,8 @@ export function useWatchingUpdatesQuery(options?: {
       }
       return undefined;
     },
-    // 只在所有依赖数据都加载完成后才执行
-    enabled: options?.enabled && playRecordsLoaded && sourceMapLoaded && remindersLoaded && !!playRecordsArray && !!sourceMap && !!reminders,
+    // 只在启用时执行
+    enabled: options?.enabled,
     // 不自动重试，避免过多请求
     retry: false,
   });
