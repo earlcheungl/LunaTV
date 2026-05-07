@@ -552,6 +552,10 @@ export function useWatchingUpdatesQuery(options?: {
     // 30分钟缓存，避免频繁检查
     staleTime: 30 * 60 * 1000,
     gcTime: 60 * 60 * 1000,
+    // 30分钟自动刷新（后台定时检查）
+    refetchInterval: 30 * 60 * 1000,
+    // 只在窗口获得焦点时才自动刷新
+    refetchIntervalInBackground: false,
     // 从 localStorage 读取初始数据（页面刷新后仍能显示）
     initialData: () => {
       try {
