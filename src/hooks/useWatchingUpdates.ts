@@ -278,10 +278,10 @@ export function useWatchingUpdatesQuery(options?: {
   return useQuery({
     queryKey: ['watchingUpdates', options?.forceRefresh ? Date.now() : 'cached'] as const,
     queryFn: async (): Promise<WatchingUpdate> => {
-      console.log('🔄 [追番更新] 开始检查追番更新...');
+      console.log('开始检查追番更新...');
 
       if (!playRecordsArray || playRecordsArray.length === 0) {
-        console.log('⚠️ [追番更新] 无播放记录，跳过检查');
+        console.log('无播放记录，跳过更新检查');
         return {
           hasUpdates: false,
           timestamp: Date.now(),
@@ -292,20 +292,17 @@ export function useWatchingUpdatesQuery(options?: {
         };
       }
 
-      console.log(`📋 [追番更新] 找到 ${playRecordsArray.length} 条播放记录`);
+      console.log(`找到 ${playRecordsArray.length} 条播放记录`);
 
-      // 筛选候选记录（观看时间超过2分钟，且不是电影）
+      // 筛选多集剧的记录（与Alpha版本保持一致，不限制是否看完）
       const candidateRecords = playRecordsArray.filter((record) => {
-        // 必须有观看时间
-        if (record.play_time < 120) return false;
-
-        // 排除电影（单集内容）
-        if (record.total_episodes <= 1) return false;
-
-        return true;
+        return record.total_episodes > 1;
       });
 
-      console.log(`🎯 [追番更新] 筛选出 ${candidateRecords.length} 个可能有更新的剧集`);
+      console.log(`找到 ${candidateRecords.length} 个可能有更新的剧集`);
+      if (candidateRecords.length > 0) {
+        console.log('候选记录详情:', candidateRecords.map(r => ({ title: r.title, index: r.index, total: r.total_episodes })));
+      }
 
       if (candidateRecords.length === 0) {
         console.log('⚠️ [追番更新] 无符合条件的剧集，跳过检查');
