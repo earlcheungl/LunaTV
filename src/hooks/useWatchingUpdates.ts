@@ -498,6 +498,29 @@ export function useWatchingUpdatesQuery(options?: {
         console.error('检查新上映内容失败:', error);
       }
 
+      // 🔧 修复：对 updatedSeries 进行排序，确保每次顺序一致，防止卡片闪烁
+      // 排序规则：
+      // 1. 新上映的排在最前面
+      // 2. 有新剧集的排在中间
+      // 3. 需要继续观看的排在后面
+      // 4. 相同类型按标题字母顺序排序
+      updatedSeries.sort((a, b) => {
+        // 优先级1: 新上映的排在最前面
+        if (a.hasNewRelease !== b.hasNewRelease) {
+          return a.hasNewRelease ? -1 : 1;
+        }
+        // 优先级2: 有新剧集的排在前面
+        if (a.hasNewEpisode !== b.hasNewEpisode) {
+          return a.hasNewEpisode ? -1 : 1;
+        }
+        // 优先级3: 需要继续观看的排在后面
+        if (a.hasContinueWatching !== b.hasContinueWatching) {
+          return a.hasContinueWatching ? -1 : 1;
+        }
+        // 优先级4: 按标题排序
+        return a.title.localeCompare(b.title, 'zh-CN');
+      });
+
       const hasUpdates = updatedCount > 0 || continueWatchingCount > 0 || newReleasesCount > 0;
 
       console.log(`检查完成: ${hasUpdates ? `发现${newReleasesCount}部新上映，${updatedCount}部剧集有新集数更新，${continueWatchingCount}部剧集需要继续观看` : '暂无更新'}`);
