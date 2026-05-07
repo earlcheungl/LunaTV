@@ -74,12 +74,13 @@ async function checkSingleRecordUpdate(
     // 调用 API 获取最新详情（绕过缓存，确保获取最新集数）
     // 添加时间戳参数绕过 CDN 缓存
     const apiUrl = `/api/detail?source=${sourceKey}&id=${videoId}&_t=${Date.now()}`;
+    console.log(`🔍 [追番更新] 检查: ${record.title} (${sourceKey}/${videoId})`);
     const response = await fetch(apiUrl, {
       cache: 'no-store',
     });
 
     if (!response.ok) {
-      console.warn(`获取${record.title}详情失败:`, response.status);
+      console.warn(`❌ [追番更新] 获取${record.title}详情失败:`, response.status);
       return {
         hasUpdate: false,
         hasNewEpisode: false,
@@ -108,6 +109,15 @@ async function checkSingleRecordUpdate(
     // 检查是否为新上映（原始集数为0或很少，现在有集数了）
     const hasNewRelease = originalTotalEpisodes <= 1 && latestEpisodes > 1;
 
+    // 输出检查结果
+    if (hasNewEpisode) {
+      console.log(`✨ [追番更新] ${record.title}: 有新集数！原始${originalTotalEpisodes}集 → 最新${latestEpisodes}集 (新增${newEpisodes}集)`);
+    } else if (hasContinueWatching) {
+      console.log(`📺 [追番更新] ${record.title}: 可继续观看 (看到第${record.index}集，共${latestEpisodes}集，剩余${remainingEpisodes}集)`);
+    } else {
+      console.log(`✓ [追番更新] ${record.title}: 已看完 (${record.index}/${latestEpisodes}集)`);
+    }
+
     return {
       hasUpdate: hasNewEpisode || hasContinueWatching,
       hasNewEpisode,
@@ -118,7 +128,7 @@ async function checkSingleRecordUpdate(
       latestEpisodes,
     };
   } catch (error) {
-    console.error(`检查${record.title}更新失败:`, error);
+    console.error(`❌ [追番更新] 检查${record.title}更新失败:`, error);
     return {
       hasUpdate: false,
       hasNewEpisode: false,
@@ -170,7 +180,10 @@ export function useWatchingUpdatesQuery(options?: {
   return useQuery({
     queryKey: ['watchingUpdates', options?.forceRefresh ? Date.now() : 'cached'] as const,
     queryFn: async (): Promise<WatchingUpdate> => {
+      console.log('🔄 [追番更新] 开始检查追番更新...');
+
       if (!playRecordsArray || playRecordsArray.length === 0) {
+        console.log('⚠️ [追番更新] 无播放记录，跳过检查');
         return {
           hasUpdates: false,
           timestamp: Date.now(),
@@ -181,7 +194,7 @@ export function useWatchingUpdatesQuery(options?: {
         };
       }
 
-      console.log('开始检查追番更新...');
+      console.log(`📋 [追番更新] 找到 ${playRecordsArray.length} 条播放记录`);
 
       // 筛选候选记录（观看时间超过2分钟，且不是电影）
       const candidateRecords = playRecordsArray.filter((record) => {
@@ -194,9 +207,10 @@ export function useWatchingUpdatesQuery(options?: {
         return true;
       });
 
-      console.log(`找到 ${candidateRecords.length} 个可能有更新的剧集`);
+      console.log(`🎯 [追番更新] 筛选出 ${candidateRecords.length} 个可能有更新的剧集`);
 
       if (candidateRecords.length === 0) {
+        console.log('⚠️ [追番更新] 无符合条件的剧集，跳过检查');
         return {
           hasUpdates: false,
           timestamp: Date.now(),
