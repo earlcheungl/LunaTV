@@ -269,17 +269,17 @@ export function useWatchingUpdatesQuery(options?: {
   const queryClient = useQueryClient();
 
   // 获取播放记录
-  const { data: playRecordsArray } = usePlayRecordsArrayQuery({
+  const { data: playRecordsArray, isSuccess: playRecordsLoaded } = usePlayRecordsArrayQuery({
     enabled: options?.enabled,
   });
 
   // 获取数据源映射
-  const { data: sourceMap } = useSourceMapQuery({
+  const { data: sourceMap, isSuccess: sourceMapLoaded } = useSourceMapQuery({
     enabled: options?.enabled,
   });
 
   // 获取想看列表（用于检查新上映内容）
-  const { data: reminders } = useRemindersQuery({
+  const { data: reminders, isSuccess: remindersLoaded } = useRemindersQuery({
     enabled: options?.enabled,
   });
 
@@ -574,8 +574,8 @@ export function useWatchingUpdatesQuery(options?: {
       }
       return undefined;
     },
-    // 只在有播放记录和数据源映射时才执行
-    enabled: options?.enabled && !!playRecordsArray && !!sourceMap && !!reminders,
+    // 只在所有依赖数据都加载完成后才执行
+    enabled: options?.enabled && playRecordsLoaded && sourceMapLoaded && remindersLoaded && !!playRecordsArray && !!sourceMap && !!reminders,
     // 不自动重试，避免过多请求
     retry: false,
   });
