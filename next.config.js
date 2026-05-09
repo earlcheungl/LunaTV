@@ -33,9 +33,6 @@ const nextConfig = {
     ],
   },
 
-  // 防止某些包在SSR时被打包，避免浏览器API访问错误
-  serverComponentsExternalPackages: ['framer-motion'],
-
   // 图片优化配置
   images: {
     // 禁用 Next.js 图片优化（代理图片不兼容）
