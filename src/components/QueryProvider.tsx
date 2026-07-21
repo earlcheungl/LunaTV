@@ -1,11 +1,22 @@
 'use client';
 
 import { QueryClientProvider, useQueryClient } from '@tanstack/react-query';
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+import dynamic from 'next/dynamic';
 import { useEffect } from 'react';
 import { getQueryClient } from '@/lib/get-query-client';
 import { subscribeToDataUpdates } from '@/lib/db.client';
 import type * as React from 'react';
+
+const ReactQueryDevtools =
+  process.env.NODE_ENV === 'development'
+    ? dynamic(
+        () =>
+          import('@tanstack/react-query-devtools').then(
+            (mod) => mod.ReactQueryDevtools
+          ),
+        { ssr: false }
+      )
+    : () => null;
 
 /**
  * 全局事件订阅：统一监听数据更新事件并 invalidate 相关 query 缓存

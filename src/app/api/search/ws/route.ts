@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
   }
 
   const config = await getConfig();
-  const apiSites = await getAvailableApiSites(authInfo.username);
+   const apiSites = await getAvailableApiSites();
 
   // 共享状态
   let streamClosed = false;

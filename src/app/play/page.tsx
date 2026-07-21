@@ -7,26 +7,20 @@
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import Hls from 'hls.js';
-import { Heart, ChevronUp, Download, X } from 'lucide-react';
+import { Heart, ChevronUp, X } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 
-import { useDownload } from '@/contexts/DownloadContext';
-import { normalizeDownloadSource } from '@/lib/download';
 import { useDanmu } from '@/hooks/useDanmu';
 import type { DanmuManualOverride } from '@/hooks/useDanmu';
-import DownloadEpisodeSelector from '@/components/download/DownloadEpisodeSelector';
 import DanmuManualMatchModal, { type DanmuManualSelection } from '@/components/DanmuManualMatchModal';
 import EpisodeSelector from '@/components/EpisodeSelector';
-import NetDiskSearchResults from '@/components/NetDiskSearchResults';
 import AcgSearch from '@/components/AcgSearch';
 import PageLayout from '@/components/PageLayout';
 import SkipController, { SkipSettingsButton } from '@/components/SkipController';
 import VideoCard from '@/components/VideoCard';
 import CommentSection from '@/components/play/CommentSection';
-import DownloadButtons from '@/components/play/DownloadButtons';
 import FavoriteButton from '@/components/play/FavoriteButton';
-import NetDiskButton from '@/components/play/NetDiskButton';
 import CollapseButton from '@/components/play/CollapseButton';
 import BackToTopButton from '@/components/play/BackToTopButton';
 import LoadingScreen from '@/components/play/LoadingScreen';
@@ -219,7 +213,6 @@ interface WakeLockSentinel {
 function PlayPageClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { createTask, setShowDownloadPanel } = useDownload();
   const watchRoom = useWatchRoomContextSafe();
 
   // TanStack Query mutations
@@ -262,14 +255,6 @@ function PlayPageClient() {
   const [shortdramaDetails, setShortdramaDetails] = useState<any>(null);
   const [loadingShortdramaDetails, setLoadingShortdramaDetails] = useState(false);
 
-  // 网盘搜索状态
-  const [netdiskResults, setNetdiskResults] = useState<{ [key: string]: any[] } | null>(null);
-  const [netdiskLoading, setNetdiskLoading] = useState(false);
-  const [netdiskError, setNetdiskError] = useState<string | null>(null);
-  const [netdiskTotal, setNetdiskTotal] = useState(0);
-  const [showNetdiskModal, setShowNetdiskModal] = useState(false);
-  const [netdiskResourceType, setNetdiskResourceType] = useState<'netdisk' | 'acg'>('netdisk'); // 资源类型
-
   // ACG 动漫磁力搜索状态
   const [acgTriggerSearch, setAcgTriggerSearch] = useState<boolean>();
 
@@ -295,12 +280,6 @@ function PlayPageClient() {
 
   // 快进快退设置面板状态
   const [isSeekButtonsSettingsPanelOpen, setIsSeekButtonsSettingsPanelOpen] = useState(false);
-
-  // 下载选集面板状态
-  const [showDownloadEpisodeSelector, setShowDownloadEpisodeSelector] = useState(false);
-
-  // 下载功能启用状态
-  const [downloadEnabled, setDownloadEnabled] = useState(true);
 
   // 视频分辨率状态
   const [videoResolution, setVideoResolution] = useState<{ width: number; height: number } | null>(null);
@@ -380,25 +359,6 @@ function PlayPageClient() {
   const websrModeRef = useRef(websrMode);
   const websrContentTypeRef = useRef(websrContentType);
   const websrNetworkSizeRef = useRef(websrNetworkSize);
-  const netdiskModalContentRef = useRef<HTMLDivElement>(null);
-
-  // 获取服务器配置（下载功能开关）
-  useEffect(() => {
-    const fetchServerConfig = async () => {
-      try {
-        const response = await fetch('/api/server-config');
-        if (response.ok) {
-          const config = await response.json();
-          setDownloadEnabled(config.DownloadEnabled ?? true);
-        }
-      } catch (error) {
-        console.error('获取服务器配置失败:', error);
-        // 出错时默认启用下载功能
-        setDownloadEnabled(true);
-      }
-    };
-    fetchServerConfig();
-  }, []);
 
   useEffect(() => {
     websrEnabledRef.current = websrEnabled;
@@ -930,12 +890,6 @@ function PlayPageClient() {
     loadShortdramaDetails();
   }, [shortdramaId, loadingShortdramaDetails, shortdramaDetails]);
 
-  // 自动网盘搜索：当有视频标题时可以随时搜索
-  useEffect(() => {
-    // 移除自动搜索，改为用户点击按钮时触发
-    // 这样可以避免不必要的API调用
-  }, []);
-
   // 视频播放地址
   const [videoUrl, setVideoUrl] = useState('');
 
@@ -1362,34 +1316,6 @@ function PlayPageClient() {
 
     // 检查结果标题是否包含查询中的所有关键词
     return queryWords.every(word => resultTitle.includes(word));
-  };
-
-  // 网盘搜索函数
-  const handleNetDiskSearch = async (query: string) => {
-    if (!query.trim()) return;
-
-    setNetdiskLoading(true);
-    setNetdiskError(null);
-    setNetdiskResults(null);
-    setNetdiskTotal(0);
-
-    try {
-      const response = await fetch(`/api/netdisk/search?q=${encodeURIComponent(query.trim())}`);
-      const data = await response.json();
-
-      if (data.success) {
-        setNetdiskResults(data.data.merged_by_type || {});
-        setNetdiskTotal(data.data.total || 0);
-        console.log(`网盘搜索完成: "${query}" - ${data.data.total || 0} 个结果`);
-      } else {
-        setNetdiskError(data.error || '网盘搜索失败');
-      }
-    } catch (error: any) {
-      console.error('网盘搜索请求失败:', error);
-      setNetdiskError('网盘搜索请求失败，请稍后重试');
-    } finally {
-      setNetdiskLoading(false);
-    }
   };
 
   // 处理演员点击事件
@@ -3705,12 +3631,6 @@ function PlayPageClient() {
     const idx = currentEpisodeIndexRef.current;
     if (d && d.episodes && idx < d.episodes.length - 1) {
       // 🔥 关键修复：通过 SkipController 自动跳下一集时，不保存播放进度
-      // 因为此时的播放位置是片尾，用户并没有真正看到这个位置
-      // 如果保存了片尾的进度，下次"继续观看"会从片尾开始，导致进度错误
-      // if (artPlayerRef.current && !artPlayerRef.current.paused) {
-      //   saveCurrentPlayProgress();
-      // }
-
       // 🔑 标记通过 SkipController 触发了下一集
       isSkipControllerTriggeredRef.current = true;
       setCurrentEpisodeIndex(idx + 1);
@@ -6179,24 +6099,7 @@ function PlayPageClient() {
         <div className='space-y-2'>
           {/* 折叠控制 */}
           <div className='flex justify-end items-center gap-2 sm:gap-3'>
-            {/* 网盘资源按钮 */}
-            <NetDiskButton
-              videoTitle={videoTitle}
-              netdiskLoading={netdiskLoading}
-              netdiskTotal={netdiskTotal}
-              netdiskResults={netdiskResults}
-              onSearch={handleNetDiskSearch}
-              onOpenModal={() => setShowNetdiskModal(true)}
-            />
-
-            {/* 下载按钮 - 使用独立组件优化性能 */}
-            <DownloadButtons
-              downloadEnabled={downloadEnabled}
-              onDownloadClick={() => setShowDownloadEpisodeSelector(true)}
-              onDownloadPanelClick={() => setShowDownloadPanel(true)}
-            />
-
-            {/* 折叠控制按钮 - 仅在 lg 及以上屏幕显示 */}
+            {/* 折叠按钮 */}
             <CollapseButton
               isCollapsed={isEpisodeSelectorCollapsed}
               onToggle={() => setIsEpisodeSelectorCollapsed(!isEpisodeSelectorCollapsed)}
@@ -6650,300 +6553,6 @@ function PlayPageClient() {
         portalContainer
       )}
       </PageLayout>
-
-      {/* 网盘资源模态框 */}
-      {showNetdiskModal && (
-        <div
-          className='fixed inset-0 z-9999 bg-black/50 flex items-end md:items-center justify-center p-0 md:p-4'
-          onClick={() => setShowNetdiskModal(false)}
-        >
-          <div
-            className='bg-white dark:bg-gray-800 rounded-t-2xl md:rounded-2xl w-full md:max-w-4xl max-h-[85vh] md:max-h-[90vh] flex flex-col shadow-2xl'
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* 头部 - Fixed */}
-            <div className='shrink-0 border-b border-gray-200 dark:border-gray-700 p-4 sm:p-6'>
-              <div className='flex items-center justify-between mb-3'>
-                <div className='flex items-center gap-2 sm:gap-3'>
-                  <div className='text-2xl sm:text-3xl'>📁</div>
-                  <div>
-                    <h3 className='text-lg sm:text-xl font-semibold text-gray-800 dark:text-gray-200'>
-                      资源搜索
-                    </h3>
-                    {videoTitle && (
-                      <p className='text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-0.5'>
-                        搜索关键词：{videoTitle}
-                      </p>
-                    )}
-                  </div>
-                  {netdiskLoading && netdiskResourceType === 'netdisk' && (
-                    <span className='inline-block ml-2'>
-                      <span className='inline-block h-4 w-4 sm:h-5 sm:w-5 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin'></span>
-                    </span>
-                  )}
-                  {netdiskTotal > 0 && netdiskResourceType === 'netdisk' && (
-                    <span className='inline-flex items-center px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300 ml-2'>
-                      {netdiskTotal} 个资源
-                    </span>
-                  )}
-                </div>
-                <button
-                  onClick={() => setShowNetdiskModal(false)}
-                  className='rounded-lg p-1.5 sm:p-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors active:scale-95'
-                  aria-label='关闭'
-                >
-                  <X className='h-5 w-5 sm:h-6 sm:w-6 text-gray-500' />
-                </button>
-              </div>
-
-              {/* 资源类型切换器 - 仅当是动漫时显示 */}
-              {(() => {
-                const typeName = detail?.type_name?.toLowerCase() || '';
-                const isAnime = typeName.includes('动漫') ||
-                               typeName.includes('动画') ||
-                               typeName.includes('anime') ||
-                               typeName.includes('番剧') ||
-                               typeName.includes('日剧') ||
-                               typeName.includes('韩剧');
-
-                console.log('[NetDisk] type_name:', detail?.type_name, 'isAnime:', isAnime);
-
-                return isAnime && (
-                  <div className='flex items-center gap-2'>
-                    <span className='text-xs sm:text-sm text-gray-600 dark:text-gray-400'>资源类型：</span>
-                    <div className='flex gap-2'>
-                      <button
-                        onClick={() => {
-                          setNetdiskResourceType('netdisk');
-                          setNetdiskResults(null);
-                          setNetdiskError(null);
-                        }}
-                        className={`px-2.5 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-medium rounded-lg border transition-all ${
-                          netdiskResourceType === 'netdisk'
-                            ? 'bg-blue-500 text-white border-blue-500 shadow-md'
-                            : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-600'
-                        }`}
-                      >
-                        💾 网盘资源
-                      </button>
-                      <button
-                        onClick={() => {
-                          setNetdiskResourceType('acg');
-                          setNetdiskResults(null);
-                          setNetdiskError(null);
-                          if (videoTitle) {
-                            setAcgTriggerSearch(prev => !prev);
-                          }
-                        }}
-                        className={`px-2.5 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-medium rounded-lg border transition-all ${
-                          netdiskResourceType === 'acg'
-                            ? 'bg-purple-500 text-white border-purple-500 shadow-md'
-                            : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-600'
-                        }`}
-                      >
-                        🎌 动漫磁力
-                      </button>
-                    </div>
-                  </div>
-                );
-              })()}
-            </div>
-
-            {/* 内容区 - Scrollable */}
-            <div ref={netdiskModalContentRef} className='flex-1 overflow-y-auto p-4 sm:p-6 relative'>
-              {/* 根据资源类型显示不同的内容 */}
-              {netdiskResourceType === 'netdisk' ? (
-                <>
-                  {videoTitle && !netdiskLoading && !netdiskResults && !netdiskError && (
-                    <div className='flex flex-col items-center justify-center py-12 sm:py-16 text-center'>
-                      <div className='text-5xl sm:text-6xl mb-4'>📁</div>
-                      <p className='text-sm sm:text-base text-gray-600 dark:text-gray-400'>
-                        点击搜索按钮开始查找网盘资源
-                      </p>
-                      <button
-                        onClick={() => handleNetDiskSearch(videoTitle)}
-                        disabled={netdiskLoading}
-                        className='mt-4 px-4 sm:px-6 py-2 sm:py-2.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors disabled:opacity-50 text-sm sm:text-base font-medium'
-                      >
-                        开始搜索
-                      </button>
-                    </div>
-                  )}
-
-                  <NetDiskSearchResults
-                    results={netdiskResults}
-                    loading={netdiskLoading}
-                    error={netdiskError}
-                    total={netdiskTotal}
-                  />
-
-                </>
-              ) : (
-                /* ACG 动漫磁力搜索 */
-                <AcgSearch
-                  keyword={videoTitle || ''}
-                  triggerSearch={acgTriggerSearch}
-                  onError={(error) => console.error('ACG搜索失败:', error)}
-                />
-              )}
-
-              {/* 返回顶部按钮 - 统一放在外层，适用于所有资源类型 */}
-              {((netdiskResourceType === 'netdisk' && netdiskTotal > 10) ||
-                (netdiskResourceType === 'acg')) && (
-                <button
-                  onClick={() => {
-                    if (netdiskModalContentRef.current) {
-                      netdiskModalContentRef.current.scrollTo({ top: 0, behavior: 'smooth' });
-                    }
-                  }}
-                  className={`sticky bottom-6 left-full -ml-14 sm:bottom-8 sm:-ml-16 w-11 h-11 sm:w-12 sm:h-12 ${
-                    netdiskResourceType === 'acg'
-                      ? 'bg-purple-500 hover:bg-purple-600'
-                      : 'bg-blue-500 hover:bg-blue-600'
-                  } text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center active:scale-95 z-50 group`}
-                  aria-label='返回顶部'
-                >
-                  <svg className='w-5 h-5 sm:w-6 sm:h-6 group-hover:translate-y-[-2px] transition-transform' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
-                    <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2.5} d='M5 10l7-7m0 0l7 7m-7-7v18' />
-                  </svg>
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 下载选集面板 */}
-      <DownloadEpisodeSelector
-      isOpen={showDownloadEpisodeSelector}
-      onClose={() => setShowDownloadEpisodeSelector(false)}
-      totalEpisodes={detail?.episodes?.length || 1}
-      episodesTitles={detail?.episodes_titles || []}
-      videoTitle={videoTitle || '视频'}
-      currentEpisodeIndex={currentEpisodeIndex}
-      onDownload={async (episodeIndexes) => {
-        if (!detail?.episodes || detail.episodes.length === 0) {
-          // 单集视频，直接下载当前
-          const currentUrl = videoUrl;
-          if (!currentUrl) {
-            toast.error('无法获取视频地址');
-            return;
-          }
-          if (!currentUrl.includes('.m3u8')) {
-            toast.error('仅支持M3U8格式视频下载');
-            return;
-          }
-          try {
-            // 使用规范化工具提取 origin 和 referer
-            const { sourceUrl, referer, origin } = normalizeDownloadSource(currentUrl);
-
-            await createTask(sourceUrl, videoTitle || '视频', 'TS', {
-              referer,
-              origin,
-            });
-
-            // 显示 Toast 通知
-            toast.success('下载已开始', {
-              description: videoTitle || '视频',
-              action: {
-                label: '查看下载',
-                onClick: () => setShowDownloadPanel(true)
-              },
-              duration: 5000,
-            });
-          } catch (error) {
-            console.error('创建下载任务失败:', error);
-            toast.error('创建下载任务失败', {
-              description: (error as Error).message,
-              duration: 5000,
-            });
-          }
-          return;
-        }
-
-        // 批量下载多集 - 立即显示 toast
-        const taskCount = episodeIndexes.length;
-        toast.success('下载已开始', {
-          description: taskCount === 1
-            ? `${videoTitle || '视频'}_第${episodeIndexes[0] + 1}集`
-            : `正在添加 ${taskCount} 个下载任务...`,
-          action: {
-            label: '查看下载',
-            onClick: () => setShowDownloadPanel(true)
-          },
-          duration: 5000,
-        });
-
-        let successCount = 0;
-        let hasAttempted = false;
-        for (const episodeIndex of episodeIndexes) {
-          hasAttempted = true;
-          try {
-            let episodeUrl = detail.episodes[episodeIndex];
-            if (!episodeUrl) continue;
-
-            // 检查是否为短剧格式，需要先解析
-            if (episodeUrl.startsWith('shortdrama:')) {
-              try {
-                const [, videoId, episode] = episodeUrl.split(':');
-                const nameParam = detail.drama_name ? `&name=${encodeURIComponent(detail.drama_name)}` : '';
-                const response = await fetch(
-                  `/api/shortdrama/parse?id=${videoId}&episode=${episode}${nameParam}`
-                );
-
-                if (response.ok) {
-                  const result = await response.json();
-                  episodeUrl = result.url || '';
-                  if (!episodeUrl) {
-                    console.warn(`第${episodeIndex + 1}集解析失败，跳过`);
-                    continue;
-                  }
-                } else {
-                  console.warn(`第${episodeIndex + 1}集解析失败，跳过`);
-                  continue;
-                }
-              } catch (parseError) {
-                console.error(`第${episodeIndex + 1}集短剧URL解析失败:`, parseError);
-                continue;
-              }
-            }
-
-            // 检查是否是M3U8
-            if (!episodeUrl.includes('.m3u8')) {
-              console.warn(`第${episodeIndex + 1}集不是M3U8格式，跳过`);
-              continue;
-            }
-
-            const episodeName = `第${episodeIndex + 1}集`;
-            const downloadTitle = `${videoTitle || '视频'}_${episodeName}`;
-
-            // 使用规范化工具提取 origin 和 referer
-            const { sourceUrl, referer, origin } = normalizeDownloadSource(episodeUrl);
-
-            await createTask(sourceUrl, downloadTitle, 'TS', {
-              referer,
-              origin,
-            });
-            successCount++;
-          } catch (error) {
-            console.error(`创建第${episodeIndex + 1}集下载任务失败:`, error);
-          }
-        }
-
-        // 如果有失败的任务，显示错误提示
-        if (successCount === 0 && hasAttempted) {
-          toast.error('下载失败', {
-            description: '无法创建下载任务，请查看控制台了解详情',
-            duration: 5000,
-          });
-        } else if (successCount < taskCount) {
-          toast.warning('部分任务创建失败', {
-            description: `成功添加 ${successCount}/${taskCount} 个下载任务`,
-            duration: 5000,
-          });
-        }
-      }}
-      />
     </>
   );
 }

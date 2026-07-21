@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
   }
 
   const config = await getConfig();
-  const apiSites = await getAvailableApiSites(authInfo.username);
+  const apiSites = await getAvailableApiSites();
 
   try {
     // 根据 resourceId 查找对应的 API 站点

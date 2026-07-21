@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const apiSites = await getAvailableApiSites(authInfo.username);
+    const apiSites = await getAvailableApiSites();
 
     // 只返回必要的字段，避免敏感信息泄露
     const sources = apiSites.map(site => ({

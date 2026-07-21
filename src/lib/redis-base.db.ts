@@ -1049,7 +1049,7 @@ export abstract class BaseRedisStorage implements IStorage {
         // 设置项目开始时间，2025年9月14日
         const PROJECT_START_DATE = new Date('2025-09-14').getTime();
         // 模拟用户创建时间（Redis模式下通常没有这个信息，使用首次播放时间或项目开始时间）
-        const userCreatedAt = userStat.firstWatchDate || PROJECT_START_DATE;
+        const userCreatedAt = (userStat as any).firstWatchDate || userStat.lastPlayTime || PROJECT_START_DATE;
         const registrationDays = Math.floor((now - userCreatedAt) / (1000 * 60 * 60 * 24)) + 1;
 
         // 统计今日新增用户
@@ -1076,7 +1076,7 @@ export abstract class BaseRedisStorage implements IStorage {
           mostWatchedSource: userStat.mostWatchedSource,
           registrationDays,
           lastLoginTime,
-          loginCount: userStat.loginCount || 0, // 添加登入次数字段
+          loginCount: (userStat as any).loginCount || 0, // 添加登入次数字段
           createdAt: userCreatedAt,
         };
 
@@ -1137,15 +1137,10 @@ export abstract class BaseRedisStorage implements IStorage {
         totalPlays,
         avgWatchTimePerUser: allUsers.length > 0 ? totalWatchTime / allUsers.length : 0,
         avgPlaysPerUser: allUsers.length > 0 ? totalPlays / allUsers.length : 0,
-        userStats: userStats.sort((a, b) => b.totalWatchTime - a.totalWatchTime),
-        topSources,
+        topContent: [],
+        topUsers: userStats.sort((a, b) => b.totalWatchTime - a.totalWatchTime),
+        recentActivity: [],
         dailyStats,
-        // 新增：用户注册统计
-        registrationStats: {
-          todayNewUsers,
-          totalRegisteredUsers: allUsers.length,
-          registrationTrend: registrationStats,
-        },
         // 新增：用户活跃度统计
         activeUsers,
       };
@@ -1162,16 +1157,10 @@ export abstract class BaseRedisStorage implements IStorage {
         totalPlays: 0,
         avgWatchTimePerUser: 0,
         avgPlaysPerUser: 0,
-        userStats: [],
-        topSources: [],
+        topContent: [],
+        topUsers: [],
+        recentActivity: [],
         dailyStats: [],
-        // 新增：用户注册统计
-        registrationStats: {
-          todayNewUsers: 0,
-          totalRegisteredUsers: 0,
-          registrationTrend: [],
-        },
-        // 新增：用户活跃度统计
         activeUsers: {
           daily: 0,
           weekly: 0,
@@ -1225,21 +1214,13 @@ export abstract class BaseRedisStorage implements IStorage {
           recentRecords: [],
           avgWatchTime: 0,
           mostWatchedSource: '',
-          // 新增字段
-          totalMovies: 0,
-          firstWatchDate: Date.now(),
-          lastUpdateTime: Date.now(),
           // 登入统计字段
-          loginCount: (loginStats as any).loginCount,
-          firstLoginTime: (loginStats as any).firstLoginTime,
-          lastLoginTime: (loginStats as any).lastLoginTime,
-          lastLoginDate: (loginStats as any).lastLoginDate,
-          lastLoginIp: (loginStats as any).lastLoginIp,
-          lastLoginLocation: (loginStats as any).lastLoginLocation,
-          lastLoginDevice: (loginStats as any).lastLoginDevice,
-          lastLoginBrowser: (loginStats as any).lastLoginBrowser,
-          lastLoginOs: (loginStats as any).lastLoginOs,
-        };
+          ...(loginStats ? {
+            loginCount: (loginStats as any).loginCount,
+            firstLoginTime: (loginStats as any).firstLoginTime,
+            lastLoginTime: (loginStats as any).lastLoginTime,
+          } : {}),
+        } as any;
       }
 
       // 计算统计数据
@@ -1310,21 +1291,13 @@ export abstract class BaseRedisStorage implements IStorage {
         recentRecords,
         avgWatchTime,
         mostWatchedSource,
-        // 新增字段
-        totalMovies,
-        firstWatchDate,
-        lastUpdateTime: Date.now(),
         // 登入统计字段
-        loginCount: loginStats.loginCount,
-        firstLoginTime: loginStats.firstLoginTime,
-        lastLoginTime: loginStats.lastLoginTime,
-        lastLoginDate: loginStats.lastLoginDate,
-        lastLoginIp: loginStats.lastLoginIp,
-        lastLoginLocation: loginStats.lastLoginLocation,
-        lastLoginDevice: loginStats.lastLoginDevice,
-        lastLoginBrowser: loginStats.lastLoginBrowser,
-        lastLoginOs: loginStats.lastLoginOs,
-      };
+        ...(loginStats ? {
+          loginCount: loginStats.loginCount,
+          firstLoginTime: loginStats.firstLoginTime,
+          lastLoginTime: loginStats.lastLoginTime,
+        } : {}),
+      } as any;
     } catch (error) {
       console.error(`获取用户 ${userName} 统计失败:`, error);
       return {
@@ -1335,16 +1308,11 @@ export abstract class BaseRedisStorage implements IStorage {
         recentRecords: [],
         avgWatchTime: 0,
         mostWatchedSource: '',
-        // 新增字段
-        totalMovies: 0,
-        firstWatchDate: Date.now(),
-        lastUpdateTime: Date.now(),
         // 登入统计字段
         loginCount: 0,
         firstLoginTime: 0,
         lastLoginTime: 0,
-        lastLoginDate: 0
-      };
+      } as any;
     }
   }
 
@@ -1388,20 +1356,17 @@ export abstract class BaseRedisStorage implements IStorage {
         .map(([key, data]) => {
           const [source, id] = key.split('+');
           return {
+            key,
             source,
-            id,
             title: data.record.title,
-            source_name: data.record.source_name,
             cover: data.record.cover,
-            year: data.record.year,
-            playCount: data.playCount,
+            totalPlays: data.playCount,
             totalWatchTime: data.totalWatchTime,
-            averageWatchTime: data.playCount > 0 ? data.totalWatchTime / data.playCount : 0,
-            lastPlayed: data.record.save_time,
+            lastPlayTime: data.record.save_time,
             uniqueUsers: data.users.size
           };
         })
-        .sort((a, b) => b.playCount - a.playCount)
+        .sort((a, b) => b.totalPlays - a.totalPlays)
         .slice(0, limit);
 
       return contentStats;

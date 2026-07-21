@@ -97,13 +97,6 @@
     }
   }
 
-  .animate-fadeIn {
-    animation: fadeIn 0.2s ease-out;
-  }
-
-  .animate-scaleIn {
-    animation: scaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  }
 }
 
 :root {
@@ -154,24 +147,6 @@ html:not(.dark) body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(107, 114, 128, 0.5);
-}
-
-/* 视频卡片悬停效果 */
-.video-card-hover {
-  transition: transform 0.3s ease;
-}
-
-.video-card-hover:hover {
-  transform: scale(1.05);
-}
-
-/* 渐变遮罩 */
-.gradient-overlay {
-  background: linear-gradient(
-    to bottom,
-    rgba(0, 0, 0, 0) 0%,
-    rgba(0, 0, 0, 0.8) 100%
-  );
 }
 
 /* 隐藏移动端（<768px）垂直滚动条 */
@@ -288,9 +263,11 @@ div[data-media-provider] video {
   animation: fade-in 0.4s ease-out;
 }
 
-/* 状态过渡动画 */
-.smooth-transition {
-  transition: all 0.3s ease-in-out;
+/* 防止移动端触摸选中文本和长按菜单 */
+.no-touch-select {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
 }
 
 /* 移动端隐藏弹幕配置按钮 - 使用设置面板简化配置 */

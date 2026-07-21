@@ -27,8 +27,8 @@ export default async function RegisterPage() {
     return <RegisterDisabledPage reason={disabledReason} />;
   }
 
-  // 检查是否需要邀请码
-  const requireInviteCode = config.UserConfig?.RequireInviteCode ?? false;
+   // 检查是否需要邀请码
+   const requireInviteCode = false; // 精简版不需要邀请码
 
   // 显示注册表单
   return <RegisterPageClient requireInviteCode={requireInviteCode} />;

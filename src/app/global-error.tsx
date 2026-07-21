@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import { RefreshCw } from 'lucide-react';
+import { reportCrash } from '@/lib/crash-report';
 
 export default function GlobalError({
   error,
@@ -35,67 +36,8 @@ export default function GlobalError({
       return;
     }
 
-    // 记录全局崩溃详情到 localStorage
-    const crashLog = {
-      timestamp: new Date().toISOString(),
-      message: error.message,
-      stack: error.stack,
-      digest: error.digest,
-      url: typeof window !== 'undefined' ? window.location.href : 'N/A',
-      userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'N/A',
-      memory: typeof performance !== 'undefined' && (performance as any).memory ? {
-        used: `${((performance as any).memory.usedJSHeapSize / 1024 / 1024).toFixed(2)} MB`,
-        total: `${((performance as any).memory.totalJSHeapSize / 1024 / 1024).toFixed(2)} MB`,
-        limit: `${((performance as any).memory.jsHeapSizeLimit / 1024 / 1024).toFixed(2)} MB`,
-      } : 'N/A',
-      localStorage: (() => {
-        if (typeof window === 'undefined') return 'N/A';
-        let total = 0;
-        try {
-          for (let key in localStorage) {
-            if (localStorage.hasOwnProperty(key)) {
-              total += (localStorage[key].length + key.length) * 2;
-            }
-          }
-          return `${(total / 1024).toFixed(2)} KB`;
-        } catch (e) {
-          return 'N/A';
-        }
-      })(),
-      type: 'GLOBAL_ERROR',
-    };
-
-    // 保存到 localStorage
-    try {
-      if (typeof window !== 'undefined') {
-        const existingLogs = localStorage.getItem('crash-logs');
-        const logs = existingLogs ? JSON.parse(existingLogs) : [];
-        logs.push(crashLog);
-
-        // 只保留最近 10 条
-        if (logs.length > 10) {
-          logs.shift();
-        }
-
-        localStorage.setItem('crash-logs', JSON.stringify(logs));
-      }
-    } catch (e) {
-      console.error('无法保存全局崩溃日志:', e);
-    }
-
-    // 发送到服务器
-    if (typeof window !== 'undefined') {
-      fetch('/api/crash-report', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(crashLog),
-      }).catch((err) => {
-        console.error('无法上报全局崩溃到服务器:', err);
-      });
-    }
-
-    // 打印到控制台
-    console.error('🔥🔥🔥 全局崩溃 (Root Layout):', crashLog);
+    // Report crash using shared utility
+    reportCrash(error, 'GLOBAL_ERROR');
   }, [error]);
 
   return (

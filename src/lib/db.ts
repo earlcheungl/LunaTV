@@ -528,16 +528,10 @@ export class DbManager {
       totalPlays: 0,
       avgWatchTimePerUser: 0,
       avgPlaysPerUser: 0,
-      userStats: [],
-      topSources: [],
+      topContent: [],
+      topUsers: [],
+      recentActivity: [],
       dailyStats: [],
-      // 新增：用户注册统计
-      registrationStats: {
-        todayNewUsers: 0,
-        totalRegisteredUsers: 0,
-        registrationTrend: [],
-      },
-      // 新增：用户活跃度统计
       activeUsers: {
         daily: 0,
         weekly: 0,

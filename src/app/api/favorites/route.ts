@@ -142,10 +142,6 @@ export async function GET(request: NextRequest) {
         origin: (favorite as any).origin || 'vod',
         // 确保 type 字段存在
         type: (favorite as any).type || undefined,
-        // 确保 releaseDate 字段存在
-        releaseDate: (favorite as any).releaseDate || undefined,
-        // 确保 remarks 字段存在
-        remarks: (favorite as any).remarks || undefined,
       };
     }
 
@@ -153,13 +149,8 @@ export async function GET(request: NextRequest) {
     const responseSize = Buffer.byteLength(JSON.stringify(upgradedFavorites), 'utf8');
     const duration = Date.now() - startTime;
 
-    // 性能监控日志
-    const durationSeconds = (duration / 1000).toFixed(2);
-    console.log(
-      `[收藏性能] 用户: ${authInfo.username} | 收藏数: ${count} | 耗时: ${durationSeconds}s (${duration}ms)`
-    );
-
     // 性能警告 - 根据不同耗时输出不同级别的日志
+    const durationSeconds = (duration / 1000).toFixed(2);
     if (duration > 25000) {
       console.error(
         `❌ [严重慢查询] 用户 ${authInfo.username} 的收藏查询耗时 ${durationSeconds}s，接近超时阈值！收藏数: ${count}`
@@ -169,13 +160,9 @@ export async function GET(request: NextRequest) {
         `⚠️  [慢查询警告] 用户 ${authInfo.username} 的收藏查询耗时 ${durationSeconds}s，建议优化。收藏数: ${count}`
       );
     } else if (duration > 5000) {
-      console.log(
-        `⏱️  [性能提示] 用户 ${authInfo.username} 的收藏查询耗时 ${durationSeconds}s，性能尚可。收藏数: ${count}`
-      );
+      // Performance tip: 5-15s query time
     } else {
-      console.log(
-        `✅ [性能良好] 用户 ${authInfo.username} 的收藏查询耗时 ${durationSeconds}s，性能优秀！收藏数: ${count}`
-      );
+      // Performance OK: <5s query time
     }
 
     recordRequest({
@@ -500,11 +487,6 @@ export async function DELETE(request: NextRequest) {
     } else {
       // 清空全部
       const all = await db.getAllFavorites(username);
-      const count = Object.keys(all).length;
-
-      console.log(
-        `[收藏性能-删除] 用户: ${username} | 待删除收藏数: ${count}`
-      );
 
       await Promise.all(
         Object.keys(all).map(async (k) => {

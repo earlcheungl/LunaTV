@@ -76,7 +76,7 @@ export async function GET(request: NextRequest) {
   }
 
   const config = await getConfig();
-  const apiSites = await getAvailableApiSites(authInfo.username);
+   const apiSites = await getAvailableApiSites();
 
   // 优化：预计算搜索变体，智能生成（普通查询1个，需要变体的2个）
   const searchVariants = generateSearchVariants(query);

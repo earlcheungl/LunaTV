@@ -39,39 +39,13 @@ interface DanmuApiConfig {
 
 // 获取弹幕API配置
 async function getDanmuApiConfig(): Promise<DanmuApiConfig> {
-  try {
-    const adminConfig = await getConfig();
-    const config = adminConfig.DanmuApiConfig;
-
-    if (config?.enabled === false) {
-      return { enabled: false, apiUrl: '', token: '', timeout: 15 };
-    }
-
-    if (config?.useCustomApi && config.customApiUrl) {
-      return {
-        enabled: true,
-        apiUrl: config.customApiUrl.replace(/\/$/, ''),
-        token: config.customToken || '',
-        timeout: config.timeout || 30,
-      };
-    }
-
-    // 使用默认配置
-    return {
-      enabled: true,
-      apiUrl: DEFAULT_DANMU_API_URL,
-      token: DEFAULT_DANMU_API_TOKEN,
-      timeout: config?.timeout || 30,
-    };
-  } catch {
-    // 配置获取失败，使用默认值
-    return {
-      enabled: true,
-      apiUrl: DEFAULT_DANMU_API_URL,
-      token: DEFAULT_DANMU_API_TOKEN,
-      timeout: 30,
-    };
-  }
+  // 精简版使用默认配置
+  return {
+    enabled: true,
+    apiUrl: DEFAULT_DANMU_API_URL,
+    token: DEFAULT_DANMU_API_TOKEN,
+    timeout: 30,
+  };
 }
 
 // 从自定义弹幕API获取弹幕（主用）
@@ -847,7 +821,6 @@ async function fetchDanmuFromXMLAPI(videoUrl: string): Promise<DanmuItem[]> {
 
       const SEGMENT_DURATION = 300; // 5分钟分段
       const MAX_DANMU_PER_SEGMENT = 500; // 每段最大弹幕数
-      // const MAX_CONCURRENT_DANMU = 50; // 同时显示的最大弹幕数 - 在前端控制
       const BATCH_SIZE = 200; // 减小批处理大小，更频繁让出控制权
 
       const timeSegments: { [key: number]: DanmuItem[] } = {};

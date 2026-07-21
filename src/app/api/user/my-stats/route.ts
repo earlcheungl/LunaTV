@@ -80,7 +80,7 @@ export async function GET(request: NextRequest) {
     // 增强统计数据：添加注册天数和登录天数计算
     const registrationDays = calculateRegistrationDays(userCreatedAt);
     // 登入天数从登入时间计算，而不是观看时间
-    const firstLoginTime = userStats.firstLoginTime || userStats.lastLoginTime || userStats.lastLoginDate || 0;
+    const firstLoginTime = userStats.firstLoginTime || 0;
     const loginDays = firstLoginTime > 0
       ? calculateRegistrationDays(firstLoginTime)
       : 0;
@@ -97,20 +97,9 @@ export async function GET(request: NextRequest) {
 
     const enhancedStats = {
       ...userStats,
-      // 确保新字段有默认值
-      totalMovies: userStats.totalMovies ?? userStats.totalPlays ?? 0,
-      firstWatchDate: userStats.firstWatchDate ?? userStats.lastPlayTime ?? Date.now(),
-      lastUpdateTime: userStats.lastUpdateTime ?? Date.now(),
-      // 注册天数计算（基于真实的用户创建时间）
       registrationDays,
-      // 登录天数计算（基于登入时间）
       loginDays,
-      // 确保包含登入次数
-      loginCount: userStats.loginCount ?? 0,
-      // 确保包含登入时间（兼容已有字段）
       firstLoginTime: userStats.firstLoginTime ?? 0,
-      lastLoginTime: userStats.lastLoginTime ?? userStats.lastLoginDate ?? 0,
-      lastLoginDate: userStats.lastLoginDate ?? userStats.lastLoginTime ?? 0
     };
 
     return NextResponse.json(enhancedStats, { status: 200 });
@@ -180,11 +169,7 @@ export async function POST(request: NextRequest) {
       totalWatchTime: isRecalculation
         ? watchTime
         : currentStats.totalWatchTime + watchTime,
-      lastUpdateTime: timestamp,
-      // 更新首次观看时间（如果还没有设置）
-      firstWatchDate: currentStats.firstWatchDate || timestamp,
-      // 简单的影片数量统计（这里可以进一步优化为精确去重）
-      totalMovies: currentStats.totalMovies || currentStats.totalPlays || 1
+      lastPlayTime: timestamp,
     };
 
     // 更新统计数据（这里需要扩展存储层支持）
@@ -322,15 +307,8 @@ export async function PUT(request: NextRequest) {
     const updatedStats = {
       ...currentStats,
       lastLoginTime: loginTime,
-      lastLoginDate: loginTime,
-      firstLoginTime: currentStats.firstLoginTime || currentStats.lastLoginDate || loginTime,
-      loginCount: (currentStats.loginCount || 0) + 1,
-      lastUpdateTime: loginTime,
-      lastLoginIp: ip,
-      lastLoginLocation: location,
-      lastLoginDevice: device,
-      lastLoginBrowser: browser,
-      lastLoginOs: os,
+      firstLoginTime: currentStats.firstLoginTime || loginTime,
+      loginCount: ((currentStats as any).loginCount || 0) + 1,
     };
 
     // 保存登入统计到数据库

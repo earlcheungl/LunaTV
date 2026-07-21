@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const apiSites = await getAvailableApiSites(authInfo.username);
+    const apiSites = await getAvailableApiSites();
 
     return NextResponse.json(apiSites);
   } catch (error) {

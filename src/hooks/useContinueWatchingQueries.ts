@@ -2,7 +2,6 @@
 
 import { useQuery, queryOptions } from '@tanstack/react-query';
 import { usePlayRecordsArrayQuery } from './usePlayRecordsQuery';
-import { useWatchingUpdatesQuery as useWatchingUpdates } from './useWatchingUpdates';
 
 /**
  * Query options for continue watching records
@@ -28,16 +27,7 @@ const continueWatchingOptions = () => queryOptions({
 
 /**
  * Fetch all play records sorted by save_time
- * Based on TanStack Query useQuery with event-driven invalidation
  */
 export function useContinueWatchingQuery() {
   return useQuery(continueWatchingOptions());
-}
-
-/**
- * Fetch watching updates (new episodes detection)
- * Uses the new TanStack Query implementation
- */
-export function useWatchingUpdatesQuery(options?: { enabled?: boolean }) {
-  return useWatchingUpdates(options);
 }

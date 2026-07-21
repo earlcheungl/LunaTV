@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import { RefreshCw } from 'lucide-react';
+import { reportCrash } from '@/lib/crash-report';
 
 export default function Error({
   error,
@@ -47,58 +48,8 @@ export default function Error({
       return;
     }
 
-    // 记录崩溃详情到 localStorage
-    const crashLog = {
-      timestamp: new Date().toISOString(),
-      message: error.message,
-      stack: error.stack,
-      digest: error.digest,
-      url: window.location.href,
-      userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'N/A',
-      memory: (performance as any).memory ? {
-        used: `${((performance as any).memory.usedJSHeapSize / 1024 / 1024).toFixed(2)} MB`,
-        total: `${((performance as any).memory.totalJSHeapSize / 1024 / 1024).toFixed(2)} MB`,
-        limit: `${((performance as any).memory.jsHeapSizeLimit / 1024 / 1024).toFixed(2)} MB`,
-      } : 'N/A',
-      localStorage: (() => {
-        let total = 0;
-        for (let key in localStorage) {
-          if (localStorage.hasOwnProperty(key)) {
-            total += (localStorage[key].length + key.length) * 2;
-          }
-        }
-        return `${(total / 1024).toFixed(2)} KB`;
-      })(),
-      type: 'PAGE_ERROR',
-    };
-
-    // 保存到 localStorage
-    try {
-      const existingLogs = localStorage.getItem('crash-logs');
-      const logs = existingLogs ? JSON.parse(existingLogs) : [];
-      logs.push(crashLog);
-
-      // 只保留最近 10 条
-      if (logs.length > 10) {
-        logs.shift();
-      }
-
-      localStorage.setItem('crash-logs', JSON.stringify(logs));
-    } catch (e) {
-      console.error('无法保存崩溃日志:', e);
-    }
-
-    // 发送到服务器
-    fetch('/api/crash-report', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(crashLog),
-    }).catch((err) => {
-      console.error('无法上报崩溃到服务器:', err);
-    });
-
-    // 打印到控制台
-    console.error('🔥 页面崩溃:', crashLog);
+    // Report crash using shared utility
+    reportCrash(error, 'PAGE_ERROR');
   }, [error]);
 
   // Don't flash error UI while reset() is in flight for DOM errors

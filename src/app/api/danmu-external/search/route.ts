@@ -23,37 +23,13 @@ interface SearchAnimeItem {
 }
 
 async function getDanmuApiConfig() {
-  try {
-    const adminConfig = await getConfig();
-    const config = adminConfig.DanmuApiConfig;
-
-    if (config?.enabled === false) {
-      return { enabled: false, apiUrl: '', token: '', timeout: 15 };
-    }
-
-    if (config?.useCustomApi && config.customApiUrl) {
-      return {
-        enabled: true,
-        apiUrl: config.customApiUrl.replace(/\/$/, ''),
-        token: config.customToken || '',
-        timeout: config.timeout || 30,
-      };
-    }
-
-    return {
-      enabled: true,
-      apiUrl: DEFAULT_DANMU_API_URL,
-      token: DEFAULT_DANMU_API_TOKEN,
-      timeout: config?.timeout || 30,
-    };
-  } catch {
-    return {
-      enabled: true,
-      apiUrl: DEFAULT_DANMU_API_URL,
-      token: DEFAULT_DANMU_API_TOKEN,
-      timeout: 30,
-    };
-  }
+  // 精简版使用默认配置
+  return {
+    enabled: true,
+    apiUrl: DEFAULT_DANMU_API_URL,
+    token: DEFAULT_DANMU_API_TOKEN,
+    timeout: 30,
+  };
 }
 
 function parsePositiveInt(value: unknown): number | null {

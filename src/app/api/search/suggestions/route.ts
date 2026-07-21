@@ -59,7 +59,7 @@ async function generateSuggestions(config: AdminConfig, query: string, username:
 > {
   const queryLower = query.toLowerCase();
 
-  const apiSites = await getAvailableApiSites(username);
+   const apiSites = await getAvailableApiSites();
   let realKeywords: string[] = [];
 
   if (apiSites.length > 0) {

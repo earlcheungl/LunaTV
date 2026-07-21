@@ -854,7 +854,7 @@ export class SqliteStorage implements IStorage {
       const thirtyDaysAgo = now - 30 * 24 * 60 * 60 * 1000;
       const PROJECT_START = new Date('2025-09-14').getTime();
 
-      const userStats: PlayStatsResult['userStats'] = [];
+      const userStats: UserPlayStat[] = [];
       let totalWatchTime = 0;
       let totalPlays = 0;
       let todayNewUsers = 0;
@@ -862,7 +862,7 @@ export class SqliteStorage implements IStorage {
 
       for (const username of allUsers) {
         const userStat = await this.getUserPlayStat(username);
-        const userCreatedAt = userStat.firstWatchDate || PROJECT_START;
+        const userCreatedAt = (userStat as any).firstWatchDate || userStat.lastPlayTime || PROJECT_START;
         const registrationDays =
           Math.floor((now - userCreatedAt) / (1000 * 60 * 60 * 24)) + 1;
 
@@ -881,10 +881,9 @@ export class SqliteStorage implements IStorage {
           avgWatchTime: userStat.avgWatchTime,
           mostWatchedSource: userStat.mostWatchedSource,
           registrationDays,
-          lastLoginTime: userStat.lastPlayTime || userCreatedAt,
-          loginCount: userStat.loginCount || 0,
+          ...(userStat as any).loginCount !== undefined ? { loginCount: (userStat as any).loginCount } : {},
           createdAt: userCreatedAt,
-        });
+        } as any);
 
         totalWatchTime += userStat.totalWatchTime;
         totalPlays += userStat.totalPlays;
@@ -934,22 +933,18 @@ export class SqliteStorage implements IStorage {
         avgWatchTimePerUser:
           allUsers.length > 0 ? totalWatchTime / allUsers.length : 0,
         avgPlaysPerUser: allUsers.length > 0 ? totalPlays / allUsers.length : 0,
-        userStats: userStats.sort(
+        topContent: [],
+        topUsers: userStats.sort(
           (a, b) => b.totalWatchTime - a.totalWatchTime,
         ),
-        topSources,
+        recentActivity: [],
         dailyStats,
-        registrationStats: {
-          todayNewUsers,
-          totalRegisteredUsers: allUsers.length,
-          registrationTrend,
-        },
         activeUsers: {
-          daily: userStats.filter((u) => u.lastLoginTime >= now - 86400000)
+          daily: userStats.filter((u) => (u as any).lastLoginTime >= now - 86400000)
             .length,
-          weekly: userStats.filter((u) => u.lastLoginTime >= sevenDaysAgo)
+          weekly: userStats.filter((u) => (u as any).lastLoginTime >= sevenDaysAgo)
             .length,
-          monthly: userStats.filter((u) => u.lastLoginTime >= thirtyDaysAgo)
+          monthly: userStats.filter((u) => (u as any).lastLoginTime >= thirtyDaysAgo)
             .length,
         },
       };
@@ -964,14 +959,10 @@ export class SqliteStorage implements IStorage {
         totalPlays: 0,
         avgWatchTimePerUser: 0,
         avgPlaysPerUser: 0,
-        userStats: [],
-        topSources: [],
+        topContent: [],
+        topUsers: [],
+        recentActivity: [],
         dailyStats: [],
-        registrationStats: {
-          todayNewUsers: 0,
-          totalRegisteredUsers: 0,
-          registrationTrend: [],
-        },
         activeUsers: { daily: 0, weekly: 0, monthly: 0 },
       };
     }
@@ -1009,19 +1000,13 @@ export class SqliteStorage implements IStorage {
           recentRecords: [],
           avgWatchTime: 0,
           mostWatchedSource: '',
-          totalMovies: 0,
-          firstWatchDate: Date.now(),
-          lastUpdateTime: Date.now(),
-          loginCount: loginStats.loginCount,
-          firstLoginTime: loginStats.firstLoginTime,
-          lastLoginTime: loginStats.lastLoginTime,
-          lastLoginDate: loginStats.lastLoginDate,
-          lastLoginIp: loginRow?.last_login_ip ?? undefined,
-          lastLoginLocation: loginRow?.last_login_location ?? undefined,
-          lastLoginDevice: loginRow?.last_login_device ?? undefined,
-          lastLoginBrowser: loginRow?.last_login_browser ?? undefined,
-          lastLoginOs: loginRow?.last_login_os ?? undefined,
-        };
+          // 登入统计字段
+          ...(loginStats ? {
+            loginCount: loginStats.loginCount,
+            firstLoginTime: loginStats.firstLoginTime,
+            lastLoginTime: loginStats.lastLoginTime,
+          } : {}),
+        } as any;
       }
 
       const totalWatchTime = values.reduce(
@@ -1079,19 +1064,13 @@ export class SqliteStorage implements IStorage {
         recentRecords,
         avgWatchTime,
         mostWatchedSource,
-        totalMovies,
-        firstWatchDate,
-        lastUpdateTime: Date.now(),
-        loginCount: loginStats.loginCount,
-        firstLoginTime: loginStats.firstLoginTime,
-        lastLoginTime: loginStats.lastLoginTime,
-        lastLoginDate: loginStats.lastLoginDate,
-        lastLoginIp: loginRow?.last_login_ip ?? undefined,
-        lastLoginLocation: loginRow?.last_login_location ?? undefined,
-        lastLoginDevice: loginRow?.last_login_device ?? undefined,
-        lastLoginBrowser: loginRow?.last_login_browser ?? undefined,
-        lastLoginOs: loginRow?.last_login_os ?? undefined,
-      };
+        // 登入统计字段
+        ...(loginStats ? {
+          loginCount: loginStats.loginCount,
+          firstLoginTime: loginStats.firstLoginTime,
+          lastLoginTime: loginStats.lastLoginTime,
+        } : {}),
+      } as any;
     } catch (error) {
       console.error(`[SQLite] getUserPlayStat 错误 (${userName}):`, error);
       return {
@@ -1102,14 +1081,10 @@ export class SqliteStorage implements IStorage {
         recentRecords: [],
         avgWatchTime: 0,
         mostWatchedSource: '',
-        totalMovies: 0,
-        firstWatchDate: Date.now(),
-        lastUpdateTime: Date.now(),
         loginCount: 0,
         firstLoginTime: 0,
         lastLoginTime: 0,
-        lastLoginDate: 0,
-      };
+      } as any;
     }
   }
 
@@ -1165,17 +1140,13 @@ export class SqliteStorage implements IStorage {
           const source = sep >= 0 ? row.key.substring(0, sep) : '';
           const id = sep >= 0 ? row.key.substring(sep + 1) : row.key;
           return {
+            key: row.key,
             source,
-            id,
             title: record.title,
-            source_name: record.source_name,
             cover: record.cover,
-            year: record.year,
-            playCount: row.play_count,
+            totalPlays: row.play_count,
             totalWatchTime,
-            averageWatchTime:
-              row.play_count > 0 ? totalWatchTime / row.play_count : 0,
-            lastPlayed: record.save_time,
+            lastPlayTime: record.save_time,
             uniqueUsers: row.unique_users,
           };
         })

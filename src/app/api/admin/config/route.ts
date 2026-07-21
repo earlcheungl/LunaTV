@@ -81,10 +81,23 @@ export async function POST(request: NextRequest) {
   }
   const username = authInfo.username;
 
-  // 只有站长可以修改配置
-  if (username !== process.env.USERNAME) {
+  // 检查权限：站长或管理员都可以修改配置
+  let hasPermission = false;
+  if (username === process.env.USERNAME) {
+    // 站长
+    hasPermission = true;
+  } else {
+    // 检查是否是管理员
+    const config = await getConfig();
+    const user = config.UserConfig.Users.find((u) => u.username === username);
+    if (user && user.role === 'admin' && !user.banned) {
+      hasPermission = true;
+    }
+  }
+
+  if (!hasPermission) {
     return NextResponse.json(
-      { error: '只有站长可以修改配置' },
+      { error: '没有权限修改配置' },
       { status: 403 }
     );
   }

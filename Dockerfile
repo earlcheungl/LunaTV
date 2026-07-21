@@ -1,30 +1,21 @@
-# ---- 第 1 阶段：安装依赖 ----
-FROM node:22-alpine AS deps
+# ---- 第 1 阶段：安装依赖并构建 ----
+FROM node:22-alpine AS builder
 
-# 启用 corepack 并激活 pnpm（Node20 默认提供 corepack）
-RUN corepack enable && corepack prepare pnpm@latest --activate
+# 安装构建工具和 pnpm
+RUN apk add --no-cache python3 make g++ \
+    && npm config set registry https://registry.npmmirror.com \
+    && npm install -g pnpm@10.14.0
 
 WORKDIR /app
 
 # 仅复制依赖清单，提高构建缓存利用率
 COPY package.json pnpm-lock.yaml ./
 
-# 清理任何潜在的缓存并安装所有依赖（包括可选的原生模块）
-RUN pnpm store prune && pnpm install --frozen-lockfile
+# 配置 pnpm 使用镜像源并安装依赖
+RUN pnpm config set registry https://registry.npmmirror.com \
+    && pnpm store prune \
+    && pnpm install --frozen-lockfile
 
-# ---- 第 2 阶段：构建项目 ----
-FROM node:22-alpine AS builder
-# 安装构建工具以编译原生模块
-RUN apk add --no-cache python3 make g++
-RUN corepack enable && corepack prepare pnpm@latest --activate
-WORKDIR /app
-
-# 复制package files先，确保依赖版本一致
-COPY package.json pnpm-lock.yaml ./
-# 复制依赖
-COPY --from=deps /app/node_modules ./node_modules
-# 验证依赖完整性，如果不匹配则重新安装
-RUN pnpm install --frozen-lockfile --offline || pnpm install --frozen-lockfile
 # 复制全部源代码
 COPY . .
 
@@ -34,7 +25,7 @@ ENV DOCKER_BUILD=true
 # 生成生产构建
 RUN pnpm run build
 
-# ---- 第 3 阶段：生成运行时镜像 ----
+# ---- 第 2 阶段：生成运行时镜像 ----
 FROM node:22-alpine AS runner
 
 # 安装 CA 证书以支持 HTTPS 请求
@@ -53,9 +44,6 @@ ENV NODE_ENV=production
 ENV HOSTNAME=0.0.0.0
 ENV PORT=3000
 ENV DOCKER_BUILD=true
-# Puppeteer 配置：使用系统安装的 Chromium（已禁用）
-# ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
-# ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 
 # 从构建器中复制 standalone 输出
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
@@ -73,4 +61,4 @@ USER nextjs
 EXPOSE 3000
 
 # 使用自定义启动脚本，先预加载配置再启动服务器
-CMD ["node", "start.js"] 
+CMD ["node", "start.js"]

@@ -99,9 +99,7 @@ export async function GET(request: NextRequest) {
       // 获取音轨信息（不影响主流程）
       let audioStreams: any[] = [];
       try {
-        console.log('========== [/api/detail] 开始获取音轨，itemId:', id);
         audioStreams = await client.getAudioStreams(id);
-        console.log('========== [/api/detail] 获取到音轨数据:', audioStreams);
       } catch (error) {
         console.error('========== [/api/detail] 获取音轨失败（不影响播放）:', error);
       }
@@ -124,7 +122,6 @@ export async function GET(request: NextRequest) {
       };
 
       const compatibleAudioIndex = findCompatibleAudioTrack(audioStreams);
-      console.log('========== [/api/detail] 选择的兼容音轨索引:', compatibleAudioIndex);
 
       let result: any;
 
@@ -176,7 +173,6 @@ export async function GET(request: NextRequest) {
               // 获取当前集的音轨
               const epAudioStreams = await client.getAudioStreams(ep.Id);
               const epCompatibleAudioIndex = findCompatibleAudioTrack(epAudioStreams);
-              console.log(`========== [/api/detail] 剧集 ${ep.Id} 选择的音轨索引:`, epCompatibleAudioIndex);
 
               return await client.getStreamUrl(ep.Id, true, false, epCompatibleAudioIndex);
             } catch (error) {
@@ -241,7 +237,7 @@ export async function GET(request: NextRequest) {
     }
 
     // 处理普通 API 站点
-    const apiSites = await getAvailableApiSites(authInfo.username);
+    const apiSites = await getAvailableApiSites();
     const apiSite = apiSites.find((site) => site.key === sourceCode);
 
     if (!apiSite) {
