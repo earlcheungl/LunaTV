@@ -237,24 +237,29 @@ export async function configSelfCheck(adminConfig: AdminConfig): Promise<AdminCo
     const dbUsers = await db.getAllUsers();
     const ownerUser = process.env.USERNAME;
 
-    const updatedUsers = await Promise.all(dbUsers.map(async username => {
-      const existingUserConfig = adminConfig.UserConfig.Users.find(u => u.username === username);
+    // 合并数据库用户和配置用户
+    const mergedUsers = new Map<string, any>();
 
-      if (existingUserConfig) {
-        return existingUserConfig;
-      } else {
+    // 先添加配置中的用户
+    for (const user of adminConfig.UserConfig.Users || []) {
+      mergedUsers.set(user.username, user);
+    }
+
+    // 再添加数据库中的用户（如果配置中没有，则添加）
+    for (const username of dbUsers) {
+      if (!mergedUsers.has(username)) {
         const createdAt = Date.now();
         const role: 'owner' | 'admin' | 'user' = username === ownerUser ? 'owner' : 'user';
-        return {
+        mergedUsers.set(username, {
           username,
           role,
           banned: false,
           createdAt,
-        };
+        });
       }
-    }));
+    }
 
-    adminConfig.UserConfig.Users = updatedUsers as any;
+    adminConfig.UserConfig.Users = Array.from(mergedUsers.values()) as any;
   } catch (e) {
     console.error('获取最新用户列表失败:', e);
   }

@@ -145,7 +145,7 @@ export default async function RootLayout({
               <SessionTracker />
               <RouteWarmup />
               <NavigationShell />
-              <main className='w-full min-h-screen pt-[calc(48px+env(safe-area-inset-top))] md:pt-16 pb-20 md:pb-8'>
+              <main className='w-full min-h-screen pt-[calc(48px+env(safe-area-inset-top))] md:pt-16 pb-24 md:pb-8'>
                 <div className='w-full max-w-[2560px] mx-auto px-4 sm:px-6 md:px-8 lg:px-12 xl:px-16 2xl:px-20'>
                   <DOMErrorBoundary componentName="PageContent">
                     <Suspense fallback={

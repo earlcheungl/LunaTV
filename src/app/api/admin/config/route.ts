@@ -105,6 +105,23 @@ export async function POST(request: NextRequest) {
   try {
     const newConfig: AdminConfig = await request.json();
 
+    // 检查是否有新用户需要注册到数据库
+    try {
+      const oldConfig = await getConfig();
+      const oldUsernames = new Set(oldConfig.UserConfig.Users.map(u => u.username));
+      const newUsernames = newConfig.UserConfig.Users.filter(u => !oldUsernames.has(u.username));
+
+      for (const user of newUsernames) {
+        if (user.password) {
+          // 注册新用户到数据库
+          await db.registerUser(user.username, user.password);
+          console.log(`[Admin] 注册新用户: ${user.username}`);
+        }
+      }
+    } catch (e) {
+      console.error('注册新用户失败:', e);
+    }
+
     // 保存新配置
     await db.saveAdminConfig(newConfig);
 

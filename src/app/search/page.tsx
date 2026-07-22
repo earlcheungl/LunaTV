@@ -1356,17 +1356,8 @@ function SearchPageClient() {
   return (
     <PageLayout activePath='/search'>
       <div className='overflow-visible mb-10 pb-40 md:pb-safe-bottom'>
-        {/* 搜索框区域 - 美化版 */}
+        {/* 搜索框区域 */}
         <div className='mb-8'>
-          {/* 搜索类型选项卡 - 仅保留影视资源搜索 */}
-          <div className='max-w-3xl mx-auto mb-6 px-3 sm:px-0'>
-            <div className='flex items-center justify-center'>
-              <div className='px-6 py-3 text-sm sm:text-base font-bold rounded-xl bg-gradient-to-br from-green-400 via-green-500 to-emerald-600 text-white shadow-lg shadow-green-500/50'>
-                🎬 影视资源搜索
-              </div>
-            </div>
-          </div>
-
           <form onSubmit={handleSearch} className='max-w-2xl mx-auto'>
             <div className='relative group'>
               {/* 搜索图标 - 增强动画 */}

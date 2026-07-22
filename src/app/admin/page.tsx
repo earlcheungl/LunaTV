@@ -57,6 +57,7 @@ export default function AdminPage() {
   // 新源表单
   const [newSource, setNewSource] = useState({ key: '', name: '', api: '' });
   const [showNewSourceForm, setShowNewSourceForm] = useState(false);
+  const [selectedSources, setSelectedSources] = useState<Set<string>>(new Set());
 
   // 新分类表单
   const [newCategory, setNewCategory] = useState({ name: '', type: 'movie' as 'movie' | 'tv', query: '' });
@@ -168,20 +169,46 @@ export default function AdminPage() {
 
     const reader = new FileReader();
     reader.onload = (event) => {
-      try {
-        const imported = JSON.parse(event.target?.result as string);
-        if (imported.SourceConfig && imported.SiteConfig) {
-          setConfig(imported);
-          setSuccess('配置已导入，请检查后保存');
-        } else {
-          setError('无效的配置文件格式');
-        }
-      } catch {
-        setError('配置文件解析失败');
+      const text = event.target?.result as string;
+      const imported = parseConfigContent(text);
+
+      if (!imported) {
+        setError('文件内容无法解析，请检查格式');
+        return;
+      }
+
+      if (imported.SourceConfig && imported.SiteConfig) {
+        setConfig(imported);
+        setSuccess('配置已导入，请检查后保存');
+      } else {
+        setError('无效的配置文件格式');
       }
     };
     reader.readAsText(file);
     if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  // 解析配置内容（支持 JSON 和 base64）
+  const parseConfigContent = (text: string): any => {
+    // 尝试直接解析 JSON
+    try {
+      return JSON.parse(text);
+    } catch {
+      // 尝试 base64 解码后解析
+      try {
+        const decoded = atob(text.trim());
+        return JSON.parse(decoded);
+      } catch {
+        // 尝试 URL safe base64
+        try {
+          const base64 = text.trim().replace(/-/g, '+').replace(/_/g, '/');
+          const decoded = atob(base64);
+          return JSON.parse(decoded);
+        } catch {
+          return null;
+        }
+      }
+    }
   };
 
   // 从 URL 导入配置
@@ -200,13 +227,20 @@ export default function AdminPage() {
         throw new Error(`获取配置失败: ${response.status}`);
       }
 
-      const imported = await response.json();
+      const text = await response.text();
+      const imported = parseConfigContent(text);
+
+      if (!imported) {
+        setError('URL 内容无法解析，请检查是否为有效的 JSON 格式');
+        return;
+      }
+
       if (imported.SourceConfig && imported.SiteConfig) {
         setConfig(imported);
         setImportUrl('');
         setSuccess('配置已导入，请检查后保存');
       } else {
-        setError('无效的配置格式');
+        setError('无效的 LunaTV 配置格式，需要包含 SourceConfig 和 SiteConfig');
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : '导入失败';
@@ -216,7 +250,7 @@ export default function AdminPage() {
     }
   };
 
-  // 从订阅源导入
+  // 从订阅源导入（使用 API 进行 Base58 解码）
   const importFromSubscription = async () => {
     if (!config?.ConfigSubscribtion?.URL) {
       setError('请先配置订阅 URL');
@@ -227,27 +261,39 @@ export default function AdminPage() {
       setImporting(true);
       setError(null);
 
-      const response = await fetch(config.ConfigSubscribtion.URL);
+      const response = await fetch('/api/admin/config_subscription/fetch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: config.ConfigSubscribtion.URL }),
+      });
+
       if (!response.ok) {
-        throw new Error(`获取订阅失败: ${response.status}`);
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || `获取订阅失败: ${response.status}`);
       }
 
-      const text = await response.text();
-      let imported: any;
-      try {
-        imported = JSON.parse(text);
-      } catch {
-        setError('订阅源格式不支持，请使用 JSON 格式');
+      const data = await response.json();
+      if (!data.configContent) {
+        throw new Error('未获取到配置内容');
+      }
+
+      const imported = parseConfigContent(data.configContent);
+
+      if (!imported) {
+        setError('订阅源内容无法解析，请检查是否为有效的 JSON 格式');
         return;
       }
 
+      // 标准 LunaTV 配置格式（包含 SourceConfig 和 SiteConfig）
       if (imported.SourceConfig && imported.SiteConfig) {
         setConfig(imported);
         setSuccess('从订阅源导入成功，请检查后保存');
-      } else if (imported.api_site) {
+      }
+      // 旧版 LunaTV 配置格式（包含 api_site）
+      else if (imported.api_site) {
         const newConfig: AdminConfig = {
           ...config!,
-          ConfigFile: text,
+          ConfigFile: data.configContent,
           SourceConfig: Object.entries(imported.api_site).map(([key, value]: [string, any]) => ({
             key,
             name: value.name || key,
@@ -258,9 +304,10 @@ export default function AdminPage() {
           })),
         };
         setConfig(newConfig);
-        setSuccess('从订阅源导入成功（旧格式已转换），请检查后保存');
-      } else {
-        setError('订阅源格式无法识别');
+        setSuccess(`从订阅源导入成功（${Object.keys(imported.api_site).length} 个源），请检查后保存`);
+      }
+      else {
+        setError('无效的 LunaTV 配置格式');
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : '导入失败';
@@ -471,6 +518,41 @@ export default function AdminPage() {
       ...config,
       SourceConfig: config.SourceConfig.filter(s => s.key !== key),
     });
+    setSelectedSources(prev => {
+      const next = new Set(prev);
+      next.delete(key);
+      return next;
+    });
+  };
+
+  const toggleSourceSelection = (key: string) => {
+    setSelectedSources(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+  };
+
+  const selectAllSources = () => {
+    if (!config) return;
+    if (selectedSources.size === config.SourceConfig.length) {
+      setSelectedSources(new Set());
+    } else {
+      setSelectedSources(new Set(config.SourceConfig.map(s => s.key)));
+    }
+  };
+
+  const deleteSelectedSources = () => {
+    if (!config || !canEdit || selectedSources.size === 0) return;
+    setConfig({
+      ...config,
+      SourceConfig: config.SourceConfig.filter(s => !selectedSources.has(s.key)),
+    });
+    setSelectedSources(new Set());
   };
 
   const toggleSourceDisabled = (key: string) => {
@@ -620,24 +702,31 @@ export default function AdminPage() {
           onToggle={() => toggleTab('importExport')}
         >
           <div className="space-y-4">
-            <div className="flex items-center gap-4">
-              <button onClick={exportConfig} className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 flex items-center gap-2">
+            {/* 导出配置 */}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+              <button onClick={exportConfig} className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 flex items-center justify-center gap-2">
                 <Download className="w-4 h-4" />
                 导出配置到文件
               </button>
               <span className="text-sm text-gray-500">下载当前配置为 JSON 文件</span>
             </div>
+
             <hr className="border-gray-200 dark:border-gray-700" />
-            <div className="flex items-center gap-4">
+
+            {/* 从文件导入 */}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
               <input type="file" ref={fileInputRef} accept=".json" onChange={importFromFile} className="hidden" />
-              <button onClick={() => fileInputRef.current?.click()} className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 flex items-center gap-2">
+              <button onClick={() => fileInputRef.current?.click()} className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 flex items-center justify-center gap-2">
                 <Upload className="w-4 h-4" />
                 从文件导入
               </button>
               <span className="text-sm text-gray-500">选择 JSON 配置文件导入</span>
             </div>
+
             <hr className="border-gray-200 dark:border-gray-700" />
-            <div className="flex items-center gap-4">
+
+            {/* 从 URL 导入 */}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
               <input
                 type="text"
                 placeholder="输入配置 JSON 的 URL"
@@ -645,25 +734,30 @@ export default function AdminPage() {
                 onChange={(e) => setImportUrl(e.target.value)}
                 className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"
               />
-              <button onClick={importFromUrl} disabled={importing || !importUrl} className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 disabled:opacity-50 flex items-center gap-2">
+              <button onClick={importFromUrl} disabled={importing || !importUrl} className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 disabled:opacity-50 flex items-center justify-center gap-2">
                 {importing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Link className="w-4 h-4" />}
                 从 URL 导入
               </button>
             </div>
+
             <hr className="border-gray-200 dark:border-gray-700" />
-            <div className="flex items-center gap-4">
+
+            {/* 从订阅源导入 */}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
               <button
                 onClick={importFromSubscription}
                 disabled={importing || !config.ConfigSubscribtion?.URL}
-                className="px-4 py-2 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600 disabled:opacity-50 flex items-center gap-2"
+                className="px-4 py-2 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600 disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {importing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
                 从订阅源导入
               </button>
-              <span className="text-sm text-gray-500">
-                {config.ConfigSubscribtion?.URL ? `订阅: ${config.ConfigSubscribtion.URL.slice(0, 50)}...` : '未配置订阅 URL'}
+              <span className="text-sm text-gray-500 truncate">
+                {config.ConfigSubscribtion?.URL ? `订阅: ${config.ConfigSubscribtion.URL.slice(0, 30)}...` : '未配置订阅 URL'}
               </span>
             </div>
+
+            {/* 订阅 URL 配置 */}
             {canEdit && (
               <div className="mt-4">
                 <label className="block text-sm font-medium mb-2">订阅 URL</label>
@@ -1047,30 +1141,63 @@ export default function AdminPage() {
           badge={`${config.SourceConfig.length} 个源`}
         >
           <div className="space-y-4">
-            {/* 视图切换 */}
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setSourceViewMode('list')}
-                className={`px-3 py-1.5 text-sm rounded-lg ${sourceViewMode === 'list' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'}`}
-              >
-                列表视图
-              </button>
-              <button
-                onClick={() => setSourceViewMode('grouped')}
-                className={`px-3 py-1.5 text-sm rounded-lg ${sourceViewMode === 'grouped' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'}`}
-              >
-                分组视图
-              </button>
+            {/* 视图切换和批量操作 */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setSourceViewMode('list')}
+                  className={`px-3 py-1.5 text-sm rounded-lg ${sourceViewMode === 'list' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'}`}
+                >
+                  列表视图
+                </button>
+                <button
+                  onClick={() => setSourceViewMode('grouped')}
+                  className={`px-3 py-1.5 text-sm rounded-lg ${sourceViewMode === 'grouped' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'}`}
+                >
+                  分组视图
+                </button>
+              </div>
+
+              {/* 批量操作 */}
+              {canEdit && sourceViewMode === 'list' && (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={selectAllSources}
+                    className="px-3 py-1.5 text-sm rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  >
+                    {selectedSources.size === config.SourceConfig.length ? '取消全选' : '全选'}
+                  </button>
+                  {selectedSources.size > 0 && (
+                    <button
+                      onClick={deleteSelectedSources}
+                      className="px-3 py-1.5 text-sm rounded-lg bg-red-500 text-white hover:bg-red-600 flex items-center gap-1"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      删除选中 ({selectedSources.size})
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
 
             {sourceViewMode === 'list' ? (
               // 列表视图
               <div className="space-y-2">
                 {config.SourceConfig.map((source) => (
-                  <div key={source.key} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                    <div className="flex-1 min-w-0">
-                      <div className="font-medium">{source.name}</div>
-                      <div className="text-sm text-gray-500 truncate">{source.api}</div>
+                  <div key={source.key} className={`flex items-center justify-between p-3 rounded-lg ${selectedSources.has(source.key) ? 'bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700' : 'bg-gray-50 dark:bg-gray-700'}`}>
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      {canEdit && (
+                        <input
+                          type="checkbox"
+                          checked={selectedSources.has(source.key)}
+                          onChange={() => toggleSourceSelection(source.key)}
+                          className="w-4 h-4 text-blue-500 rounded"
+                        />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium">{source.name}</div>
+                        <div className="text-sm text-gray-500 truncate">{source.api}</div>
+                      </div>
                     </div>
                     <div className="flex items-center gap-2 ml-4">
                       {source.is_adult && (
@@ -1087,11 +1214,9 @@ export default function AdminPage() {
                           <button onClick={() => toggleSourceAdult(source.key)} className={`p-1 ${source.is_adult ? 'text-red-500' : 'text-gray-500'}`} title="切换成人内容标记">
                             <Filter className="w-4 h-4" />
                           </button>
-                          {source.from === 'custom' && (
-                            <button onClick={() => deleteSource(source.key)} className="p-1 text-gray-500 hover:text-red-500" title="删除">
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          )}
+                          <button onClick={() => deleteSource(source.key)} className="p-1 text-gray-500 hover:text-red-500" title="删除">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
                         </>
                       )}
                     </div>

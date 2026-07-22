@@ -96,14 +96,9 @@ export default function ModernNav() {
     router.push(href);
   };
 
-  // 桌面端显示所有，移动端显示前4个（首页、电影、剧集、搜索）
+  // 桌面端显示所有，移动端显示所有（可滑动）
   const desktopItems = menuItems;
-  const mobileItems = [
-    menuItems[0], // 首页
-    menuItems[1], // 电影
-    menuItems[2], // 剧集
-    menuItems[5], // 搜索
-  ];
+  const mobileItems = menuItems;
 
   return (
     <>
@@ -145,9 +140,9 @@ export default function ModernNav() {
         </div>
       </nav>
 
-      {/* Mobile Navigation - Bottom */}
-      <nav className='md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/90 dark:bg-gray-900/90 backdrop-blur-md shadow-sm'>
-        <div className='flex items-center justify-around h-16 px-2'>
+      {/* Mobile Navigation - Bottom (可滑动) */}
+      <nav className='md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/90 dark:bg-gray-900/90 backdrop-blur-md shadow-sm border-t border-gray-200 dark:border-gray-700'>
+        <div className='flex items-center overflow-x-auto scrollbar-hide h-14 px-1 gap-1'>
           {mobileItems.map((item) => (
             <button
               key={item.href}
@@ -159,7 +154,7 @@ export default function ModernNav() {
               }`}
             >
               <item.icon className={`w-5 h-5 ${active === item.href ? 'text-white' : item.color}`} />
-              <span className='text-xs font-medium'>{item.label}</span>
+              <span className='text-[10px] font-medium whitespace-nowrap'>{item.label}</span>
             </button>
           ))}
         </div>

@@ -26,6 +26,7 @@ export interface AdminConfig {
     AllowRegister?: boolean;
     Users: {
       username: string;
+      password?: string;
       role: 'user' | 'admin' | 'owner';
       banned?: boolean;
       enabledApis?: string[];
